@@ -1,0 +1,124 @@
+#!/bin/bash
+
+CONTAINER_NAME="riscv-dev"
+DOCKER_COMPOSE_FILE="$(pwd)/docker/compose.yaml"
+# Cores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCESSO]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[AVISO]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERRO]${NC} $1"
+}
+
+check_container() {
+    if ! docker ps | grep -q $CONTAINER_NAME; then
+        print_warning "Container não está rodando. Iniciando..."
+        start_container
+    fi
+}
+
+start_container() {
+    if docker ps -a | grep -q $CONTAINER_NAME; then
+        if ! docker ps | grep -q $CONTAINER_NAME; then
+            print_status "Iniciando container existente..."
+            docker start $CONTAINER_NAME > /dev/null
+        fi
+    else
+        print_status "Criando e iniciando container..."
+        docker-compose -f $DOCKER_COMPOSE_FILE up -d
+    fi
+    
+    # Aguardar container ficar pronto
+    sleep 2
+    print_success "Container $CONTAINER_NAME está rodando"
+}
+
+stop_container() {
+    print_status "Parando container..."
+    docker-compose -f $DOCKER_COMPOSE_FILE down
+    print_success "Container parado"
+}
+
+enter_shell() {
+    check_container
+    print_status "Entrando no container..."
+    docker exec -it $CONTAINER_NAME /bin/bash
+}
+
+show_status() {
+    print_status "Status do ambiente RISC-V:"
+    echo
+    
+    if docker ps | grep -q $CONTAINER_NAME; then
+        print_success "Container está rodando"
+        
+        docker exec $CONTAINER_NAME bash -c "
+            echo '=== Versão do GCC ==='
+            riscv32-unknown-elf-gcc --version | head -1
+            echo '=== Instruções customizadas ==='
+            if [ -f /workspace/opcodes/opcodes-custom ]; then
+                cat /workspace/opcodes/opcodes-custom
+            else
+                echo 'Nenhuma instrução customizada encontrada'
+            fi
+        " 2>/dev/null || print_warning "Erro ao obter informações do toolchain"
+    else
+        print_warning "Container não está rodando"
+    fi
+    
+    if [ -d "riscv-workspace" ]; then
+        echo -e "\n=== Estrutura do workspace ==="
+        find riscv-workspace -type f | head -10
+    fi
+}
+
+show_help() {
+    echo "Script de Desenvolvimento RISC-V Rápido"
+    echo
+    echo "Uso: $0 {comando} [argumentos]"
+    echo
+    echo "Comandos disponíveis:"
+    echo "  start                                 - Iniciar container"
+    echo "  stop                                  - Parar container"
+    echo "  shell                                 - Entrar no container"
+    echo "  status                                - Ver status do ambiente"
+    echo "  help                                  - Mostrar esta ajuda"
+    echo
+}
+
+case "$1" in
+    start)
+        start_container
+        ;;
+    stop)
+        stop_container
+        ;;
+    shell)
+        enter_shell
+        ;;
+    status)
+        show_status
+        ;;
+    help|--help|-h)
+        show_help
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
