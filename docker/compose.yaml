@@ -1,11 +1,12 @@
 services:
   riscv-dev:
-    build: .
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: riscv-dev
     volumes:
       - ../workspace:/workspace:rw
-      # remove the # in the following line to enable opcodes binding
-      # - ../workspace/opcodes:/root/riscv-dev/riscv-opcodes/opcodes:rw
+      - ../workspace/opcodes:/root/riscv-dev/riscv-opcodes/opcodes:rw
       - ../workspace/binutils-patches:/patches/binutils:rw
       - ../workspace/gcc-patches:/patches/gcc:rw
       - ../workspace/tests:/tests:rw
@@ -14,7 +15,7 @@ services:
     tty: true
     stdin_open: true
     environment:
-      - UMASK=000 # permissão total
+      - UMASK=000
       - RISCV=/opt/riscv
       - PATH=/opt/riscv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    command: /bin/bash -c "umask 000 && /bin/bash"
+    command: /bin/bash -c "chmod -R 777 /workspace && umask 000 && /bin/bash"
