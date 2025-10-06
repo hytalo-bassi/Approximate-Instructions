@@ -5,7 +5,7 @@
 
 ---
 
-Versão em português disponível [aqui](./README_pt.md)
+Versão em português disponível [aqui](./docs/README_pt.md)
 
 This repository demonstrates how to integrate approximate instructions into the RISC-V instruction set and SPIKE simulator.
 
@@ -18,14 +18,6 @@ This repository provides a comprehensive guide for developing and implementing a
 ## Requirements
 
 The following guide should be followed in order to download, setup and use all the tools: [INSTALLING.md](./docs/INSTALLING.md)
-
-### Part 1: Adding Approximate Instructions to RISC-V Toolchain
-
-Follow carefully the [RISC-V GNU Toolchain setup guide](./docs/APPROX_SETUP_PART_1.md). Then go the next part.
-
-### Part 2: Adding Approximate Instructions to SPIKE
-
-Follow carefully the [Spike setup guide](./docs/APPROX_SETUP_PART_2.md).
 
 ## References
 

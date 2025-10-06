@@ -91,6 +91,8 @@ f32_divx.c
 Add function declarations to `riscv-isa-sim/softfloat/internals.h`:
 
 ```c
+...
+float32_t softfloat_roundPackToF32( bool, int_fast16_t, uint_fast32_t ); // place the content after this line
 // For faddx and fsubx
 float32_t softfloat_addMagsF32x(uint_fast32_t, uint_fast32_t);
 float32_t softfloat_subMagsF32x(uint_fast32_t, uint_fast32_t);

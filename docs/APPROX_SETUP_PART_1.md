@@ -2,7 +2,7 @@
 
 ### Step 1: Add Opcodes
 
-**Notes: you should downgrade the opcodes repo before adding the instructions! Follow the [instalation guide](./docs/INSTALLING.md) to downgrade it.**
+**Notes: you should downgrade the opcodes repo before adding the instructions! Follow the [instalation guide](../docs/INSTALLING.md) to downgrade it.**
 
 Navigate to the `riscv-opcodes` directory and add the following opcodes to `riscv-opcodes/opcodes`:
 
@@ -30,10 +30,12 @@ Change `/path/to/opcodes` with the actual path to the `opcodes.txt` file you wro
 
 ```bash
 cd  /root/riscv-dev/riscv-opcodes # if you are using the docker
-cat /path/to/opcodes/opcodes.txt |  python2 parse-opcodes -c > /path/to/opcodes/instructionInfo.h
+cat /path/to/opcodes/opcodes.txt |  python2 parse-opcodes -c > /root/riscv-dev/riscv-opcodes/instructionInfo.h
+cp encoding.h /root/riscv-dev/spike/riscv/encoding.h
+cat instructionInfo.h >> /root/riscv-dev/spike/riscv/encoding.h
 ```
 
-A new file called `"instructionInfo.h"` should have been created along with `opcodes.txt`.
+A new file called `"instructionInfo.h"` should have been created.
 
 ### Step 2: Verify Generated Definitions
 
@@ -41,6 +43,7 @@ Check that `instructionInfo.h` contains the following definitions:
 
 **Integer Instructions:**
 ```c
+// the instruction must be after #ifndef RISCV_ENCODING_H 
 #define MATCH_ADDX 0x200002b
 #define MASK_ADDX  0xfe00707f
 #define MATCH_SUBX 0x200002f
@@ -52,16 +55,20 @@ Check that `instructionInfo.h` contains the following definitions:
 #define MATCH_REMX 0x200007b
 #define MASK_REMX  0xfe00707f
 
-// Declarations
+// #endif
+// ...
+// the declarations must be after #ifndef DECLARE_INSN
 DECLARE_INSN(addx, MATCH_ADDX, MASK_ADDX)
 DECLARE_INSN(subx, MATCH_SUBX, MASK_SUBX)
 DECLARE_INSN(mulx, MATCH_MULX, MASK_MULX)
 DECLARE_INSN(divx, MATCH_DIVX, MASK_DIVX)
 DECLARE_INSN(remx, MATCH_REMX, MASK_REMX)
+// #endif
 ```
 
 **Floating-Point Instructions:**
 ```c
+// the instructions must be after #ifndef RISCV_ENCODING_H 
 #define MATCH_FADDX_S 0x80000053
 #define MASK_FADDX_S  0xfe00007f
 #define MATCH_FSUBX_S 0x88000053
@@ -71,11 +78,14 @@ DECLARE_INSN(remx, MATCH_REMX, MASK_REMX)
 #define MATCH_FDIVX_S 0x98000053
 #define MASK_FDIVX_S  0xfe00007f
 
-// Declarations
+// #endif
+// ...
+// the declarations must be after #ifndef DECLARE_INSN
 DECLARE_INSN(faddx_s, MATCH_FADDX_S, MASK_FADDX_S)
 DECLARE_INSN(fsubx_s, MATCH_FSUBX_S, MASK_FSUBX_S)
 DECLARE_INSN(fmulx_s, MATCH_FMULX_S, MASK_FMULX_S)
 DECLARE_INSN(fdivx_s, MATCH_FDIVX_S, MASK_FDIVX_S)
+// #endif
 ```
 
 ### Step 3: Update Header Files
@@ -88,20 +98,24 @@ Copy the same definitions from Step 2 into these files.
 
 If you are using the docker:
 
+> To download a patcher script and enter the container:
 ```bash
+docker cp scripts/update_opcodes_files.py riscv-dev:/tmp
 ./scripts/dev shell # starts and enter the docker shell
-cat /path/to/opcodes/instructionInfo.h >> /root/riscv-dev/riscv-gnu-toolchain/gdb/include/opcode/riscv-opc.h
-cat /path/to/opcodes/instructionInfo.h >> /root/riscv-dev/riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h
-# appends to the bottom of both files the content of instructionInfo.h
+```
+
+> To patch the Header files and opcode files (you can go to Step 5 after running this command)
+```bash
+python3 /tmp/update_opcodes_files.py  /root/riscv-dev/riscv-gnu-toolchain/ # patches all the needed files
 ```
 
 ### Step 4: Update Opcode Files
 
-Add instruction specifications just as before to:
-- `riscv-gnu-toolchain/riscv-gdb/opcodes/riscv-opc.c`
-- `riscv-gnu-toolchain/riscv-binutils/opcodes/riscv-opc.c`
+Replace the instruction specifications in:
+- `riscv-gnu-toolchain/gdb/opcodes/riscv-opc.c`
+- `riscv-gnu-toolchain/binutils/opcodes/riscv-opc.c`
 
-**Note:** For riscv-gdb, remove `_INX` from `INSN_CLASS_F_INX`.
+With:
 
 **Integer Instructions:**
 ```c
@@ -110,7 +124,10 @@ Add instruction specifications just as before to:
 {"mulx",    0, INSN_CLASS_I, "d,s,t", MATCH_MULX, MASK_MULX, match_opcode, 0},
 {"divx",    0, INSN_CLASS_I, "d,s,t", MATCH_DIVX, MASK_DIVX, match_opcode, 0},
 {"remx",    0, INSN_CLASS_I, "d,s,t", MATCH_REMX, MASK_REMX, match_opcode, 0},
+// they should be inside the block, you can take a look at the files listed before to know where they should be.
 ```
+
+**Note:** For riscv-gdb, remove `_INX` from `INSN_CLASS_F_INX`.
 
 **Floating-Point Instructions:**
 ```c
@@ -122,6 +139,7 @@ Add instruction specifications just as before to:
 {"fmulx.s", 0, INSN_CLASS_F_INX, "D,S,T,m", MATCH_FMULX_S, MASK_FMULX_S, match_opcode, 0},
 {"fdivx.s", 0, INSN_CLASS_F_INX, "D,S,T",   MATCH_FDIVX_S|MASK_RM, MASK_FDIVX_S|MASK_RM, match_opcode, 0},
 {"fdivx.s", 0, INSN_CLASS_F_INX, "D,S,T,m", MATCH_FDIVX_S, MASK_FDIVX_S, match_opcode, 0},
+// they should be inside the block, you can take a look at the files listed before to know where they should be.
 ```
 
 ### Step 5: Rebuild RISC-V GNU Toolchain
@@ -130,8 +148,6 @@ Add instruction specifications just as before to:
 cd riscv-gnu-toolchain
 make clean
 ./configure --prefix=/opt/riscv --with-arch=rv32i --with-abi=ilp32
-# OR
-./configure --prefix=/opt/riscv --with-arch=rv32imafdc --with-abi=ilp32
 sudo make
 ```
 
@@ -172,3 +188,9 @@ int main(){
 riscv32-unknown-elf-gcc addx.c -O1 -march=rv32imafdc -o addx 
 riscv32-unknown-elf-objdump -dC addx > addx.dump
 ```
+
+## Troubleshooting
+
+> `Error when compiling riscv-gnu-toolchain: make: *** [Makefile:609: stamps/build-binutils-newlib] Error 2`
+
+**Solution**: check the header files and c-files changed at Step 3 and 4, their content might be out of position; specially for the header files: `DECLARE_INSN*` should be within `#ifdef DECLARE_INSN` and the last `#endif`.
