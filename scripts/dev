@@ -1,8 +1,29 @@
 #!/bin/bash
 
+### Este script foi desenvolvido com a intenção de facilitar tarefas cotidianas
+### como iniciar o docker compose ou entrar no container.
+### Novas alterações e funcionalidades podem e DEVEM ser adicionadas no futuro,
+### desde que essas funcionalidades e alterações sejam:
+### - Funcionalidades focadas em auxiliar o processo de desenvolvimento,
+###   como configurar arquivos que os desenvolvedores terão que alterar;
+###   auxiliar no processo de build, compilação e testes; desenvolver
+###   estatísticas e dashboards e tudo que venha facilitar o processo de trabalho
+###   do desenvolvedor ou pesquisador.
+###
+### - Independentes de plataforma ou focadas no Docker disponível no repositório.
+###   Ou seja, se uma funcionalidade estiver aqui,  ela deve funcionar
+###   em todos os linux (ou a maioria) ou deve ser voltada ao Docker.
+### 
+### Além disso, a pasta onde este arquivo reside (`scripts/`) é destinada exclusivamente
+### a códigos e scripts que automatizam as tarefas no processo de desenvolvimento deste
+### projeto. Portanto, todos os arquivos dentro de `scripts/`:
+### - auxiliam nas funcionalidades presentes neste script.
+### - Padronizam formatos, boas práticas e estrutura de pastas e documentos.
+
 CONTAINER_NAME="riscv-dev"
 DOCKER_COMPOSE_FILE="$(pwd)/docker/compose.yaml"
-# Cores para output
+SCRIPTS_FOLDER="$(pwd)/scripts"
+NECESSARY_FILES="$(pwd)/rv_approx $(pwd)/scripts/patch.py $(pwd)/scripts/scripts/update_opcodes_files.py" 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -25,6 +46,15 @@ print_error() {
     echo -e "${RED}[ERRO]${NC} $1"
 }
 
+check_necessary_files() {
+    for f in $FILES; do
+        if [ ! -f "$f" ]; then
+            echo "Missing required file: $f"
+            exit 1
+        fi
+    done
+}
+
 check_container() {
     if ! docker ps | grep -q $CONTAINER_NAME; then
         print_warning "Container não está rodando. Iniciando..."
@@ -40,18 +70,35 @@ start_container() {
         fi
     else
         print_status "Criando e iniciando container..."
-        docker-compose -f $DOCKER_COMPOSE_FILE up -d
+        # Exits with Error code 1 if files does not exists
+        check_necessary_files
+        
+        if ! docker-compose -f $DOCKER_COMPOSE_FILE up -d; then
+            print_error "Não foi possível iniciar o container!"
+            exit 1
+        fi
     fi
     
-    # Aguardar container ficar pronto
     sleep 2
     print_success "Container $CONTAINER_NAME está rodando"
 }
 
 stop_container() {
     print_status "Parando container..."
-    docker-compose -f $DOCKER_COMPOSE_FILE down
+    if ! docker-compose -f $DOCKER_COMPOSE_FILE down; then
+        print_error "Não foi possível parar o container!"
+        exit 1
+    fi
     print_success "Container parado"
+}
+
+rebuild_container() {
+    print_status "Rebuilding container..."
+    if ! docker-compose -f $DOCKER_COMPOSE_FILE build; then
+        print_error "Something went wrong while rebuilding!"
+        exit 1
+    fi
+    print_success "Container rebuilt succesfully!"
 }
 
 enter_shell() {
@@ -89,19 +136,28 @@ show_status() {
 
 show_help() {
     echo "Script de Desenvolvimento RISC-V Rápido"
-    echo
-    echo "Uso: $0 {comando} [argumentos]"
-    echo
-    echo "Comandos disponíveis:"
-    echo "  start                                 - Iniciar container"
-    echo "  stop                                  - Parar container"
-    echo "  shell                                 - Entrar no container"
-    echo "  status                                - Ver status do ambiente"
-    echo "  help                                  - Mostrar esta ajuda"
-    echo
+
+    case "$1" in
+        *)
+            echo
+            echo "Uso: $0 {comando} [argumentos]"
+            echo
+            echo "Comandos disponíveis:"
+            echo "  start                                 - Iniciar container"
+            echo "  stop                                  - Parar container"
+            echo "  shell                                 - Entrar no container"
+            echo "  status                                - Ver status do ambiente"
+            echo "  help                                  - Mostrar esta ajuda"
+            echo "  rebuild                               - Reconstruir container"
+            echo
+            ;;
+    esac
 }
 
-case "$1" in
+command=$1
+shift
+
+case "$command" in
     start)
         start_container
         ;;
@@ -114,11 +170,14 @@ case "$1" in
     status)
         show_status
         ;;
+    rebuild)
+        rebuild_container
+        ;;
     help|--help|-h)
-        show_help
+        show_help "$@"
         ;;
     *)
-        show_help
+        show_help "$@"
         exit 1
         ;;
 esac
