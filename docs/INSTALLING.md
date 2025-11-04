@@ -312,6 +312,19 @@ float32_t f32_add( float32_t, float32_t );
 
 ```
 
+
+#### 3.4 Adding the instructions
+
+First, copy all the header files at `Approx_Instructions/` directory and place them at `riscv-gnu-toolchain/spike/riscv/insns/`:
+```bash
+cp Approx_Instructions/*.h riscv-gnu-toolchain/spike/riscv/insns/ # execute this command on project's root
+```
+
+Second, copy all the C files  in `Approx_Instructions/` directory and place them at `riscv-gnu-toolchain/spike/softfloat/`:
+```bash
+cp Approx_Instructions/*.c riscv-gnu-toolchain/spike/softfloat/
+```
+
 ### 4. RISCV-GNU-TOOLCHAIN
 
 - Enter the `riscv-gnu-toolchain` folder.
