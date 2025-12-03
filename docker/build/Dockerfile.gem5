@@ -1,0 +1,47 @@
+FROM lscad/base-riscv-image:latest
+
+ENV DEBIAN_FRONTEND=noninteractive
+ARG BUILD_JOBS
+
+WORKDIR /opt
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    build-essential \
+    scons \
+    python3-dev \
+    pre-commit \
+    zlib1g \
+    zlib1g-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
+    libprotoc-dev \
+    libgoogle-perftools-dev \
+    libboost-all-dev \
+    libhdf5-serial-dev \
+    python3-pydot \
+    python3-venv \
+    python3-tk mypy \
+    m4 \
+    libcapstone-dev \
+    libpng-dev \
+    libelf-dev \
+    pkg-config \
+    wget \
+    cmake \
+    doxygen \
+    clang-format && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN git clone --single-branch https://github.com/gem5/gem5.git && \
+    cd gem5 && \
+    git checkout ddd4ae3
+
+COPY config/simple_config.py gem5/
+COPY patches/gem5/decoder.isa gem5/src/arch/riscv/isa/decoder.isa
+
+RUN cd gem5 && \
+    scons build/RISCV/gem5.opt -j ${BUILD_JOBS:-$(( ( $(nproc) + 1 ) / 2 ))}
+
+WORKDIR /workspace

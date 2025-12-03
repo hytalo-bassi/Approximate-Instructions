@@ -1,16 +1,25 @@
+# choose the service with
+# docker compose -f docker/compose.yaml up <service_name> -d
 services:
-  riscv-dev:
+  base:
+    build:
+      context: ..
+      dockerfile: docker/build/Dockerfile.base
+    image: lscad/base-riscv-image:latest
+    environment:
+      - PATH=/opt/riscv-linux/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+  riscv-gem5:
     build: 
       context: ..
-      dockerfile: docker/Dockerfile
-    container_name: riscv-dev
+      dockerfile: docker/build/Dockerfile.gem5
+    image: lscad/build-riscv-gem5:latest
+    depends_on:
+      - base
+    container_name: riscv-gem5
     volumes:
-      - ../workspace:/workspace:rw
-      - ../workspace/opcodes:/root/riscv-dev/riscv-opcodes/opcodes:rw
-      - ../workspace/binutils-patches:/patches/binutils:rw
-      - ../workspace/gcc-patches:/patches/gcc:rw
-      - ../workspace/tests:/tests:rw
-      - ../workspace/projects:/projects:rw
+      - shared-workspace:/workspace:rw
+      - shared-workspace-projects:/projects:rw
     working_dir: /workspace
     tty: true
     stdin_open: true
@@ -19,3 +28,17 @@ services:
       - RISCV=/opt/riscv
       - PATH=/opt/riscv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     command: /bin/bash -c "chmod -R 777 /workspace && umask 000 && /bin/bash"
+
+volumes:
+  shared-workspace:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/workspace
+  shared-workspace-projects:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/workspace/projects

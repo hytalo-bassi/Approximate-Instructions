@@ -1,0 +1,135 @@
+# Build this image as lscad/base-riscv-image
+FROM ubuntu:22.04 AS builder
+
+ARG BUILD_JOBS
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    RISCV_LINUX="/opt/riscv-linux" \
+    PATH="${RISCV_LINUX}/bin:/root/.local/bin:${PATH}"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    autoconf \
+    automake \
+    autotools-dev \
+    libtool \
+    git \
+    make \
+    cmake \
+    bison \
+    flex \
+    gawk \
+    texinfo \
+    gperf \
+    patchutils \
+    bc \
+    libmpc-dev \
+    libmpfr-dev \
+    libgmp-dev \
+    zlib1g-dev \
+    libexpat1-dev \
+    libzstd-dev \
+    libpthread-stubs0-dev \
+    unzip \
+    python3 \
+    python3-matplotlib \
+    python3-dev \
+    pipx\
+    python3-venv \
+    device-tree-compiler \
+    curl \
+    libisl-dev \
+    wget \
+    libboost-system-dev \
+    libboost-regex-dev \
+    ca-certificates \
+    pre-commit \
+    zlib1g \
+    libprotobuf-dev \
+    protobuf-compiler \
+    libprotoc-dev \
+    libgoogle-perftools-dev \
+    libboost-all-dev \
+    libhdf5-serial-dev \
+    python3-pydot \
+    python3-tk \
+    mypy \
+    m4 \
+    libcapstone-dev \
+    libpng-dev \
+    libelf-dev \
+    pkg-config \
+    doxygen \
+    clang-format \
+    scons && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    pipx install uv
+
+RUN mkdir -p /root/riscv-dev
+WORKDIR /root/riscv-dev
+
+RUN git clone --depth=1 --single-branch https://github.com/riscv/riscv-gnu-toolchain.git && \
+    git clone --single-branch https://github.com/riscv/riscv-opcodes && \
+    cd riscv-gnu-toolchain && \
+    git checkout 75b35f8 && \
+    git submodule update --init --depth=1 --recursive binutils gcc gdb
+
+WORKDIR /root/riscv-dev/riscv-gnu-toolchain
+
+COPY patches/riscv-gnu-toolchain/gdb/include/opcode/riscv-opc.h gdb/include/opcode/riscv-opc.h
+COPY patches/riscv-gnu-toolchain/gdb/opcodes/riscv-opc.c gdb/opcodes/riscv-opc.c
+COPY patches/riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h binutils/include/opcode/riscv-opc.h
+COPY patches/riscv-gnu-toolchain/binutils/opcodes/riscv-opc.c binutils/opcodes/riscv-opc.c
+
+WORKDIR /root/riscv-dev
+
+COPY rv_approx riscv-opcodes/extensions/unratified/
+RUN cd riscv-opcodes && \
+    git checkout 3deaa8c && \
+    make EXTENSIONS='unratified/rv*'
+
+RUN cd riscv-gnu-toolchain && \
+    cd gcc/ && \
+    ./contrib/download_prerequisites && \
+    cd ../ && \
+    ./configure --prefix=${RISCV_LINUX} --with-arch=rv32imafdc --with-abi=ilp32d --disable-multilib && \
+    make linux -j${BUILD_JOBS:-$(( ( $(nproc) + 1 ) / 2 ))}
+
+RUN rm -rf /root/riscv-dev \
+    /root/.cache \
+    /tmp/*
+
+### This dockerfile stage lets available all riscv32 Linux
+### tools.
+
+FROM ubuntu:22.04 AS final
+ENV RISCV_LINUX="/opt/riscv-linux" \
+    PATH="${RISCV_LINUX}/bin:${PATH}"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmpc3 \
+    libmpfr6 \
+    libisl-dev \
+    libgmp10 \
+    libstdc++6 \
+    zlib1g \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/riscv-linux $RISCV_LINUX
+
+RUN find ${RISCV_LINUX} -name "*.la" -type f -delete && \
+    rm -rf ${RISCV_LINUX}/share/man ${RISCV_LINUX}/share/doc && \
+    strip --strip-unneeded ${RISCV_LINUX}/bin/* 2>/dev/null || true
+
+RUN mkdir -p /workspace
+
+WORKDIR /workspace
+
+# Metadata
+LABEL description="RISC-V toolchain with approximate computing instructions" \
+    version="1.0" \
+    base_os="ubuntu:22.04"
