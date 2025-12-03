@@ -10,7 +10,7 @@ This guide provides step-by-step instructions for installing all required tools 
 - Mac with Docker
 
 ### Hardware
-- **Disk space:** Minimum 10-15 GB free (the RISC-V toolchain compilation is large).
+- **Disk space:** Minimum 20-25 GB free (the RISC-V toolchain compilation is large).
 - **RAM**: At least 4 GB (8 GB recommended for parallel compilation with -j$(nproc))
 - **CPU**: Multi-core processor recommended (compilation can take 30 minutes to several hours)
 
@@ -56,7 +56,11 @@ To install the tools in a docker container you first need to install Docker and 
 After installing docker and docker-compose, you can start the installation process by running:
 
 ```bash
-./scripts/dev start
+# if you are going to need gem5
+docker compose -f docker/compose.yaml up riscv-gem5 -d
+# if you do not a simulator, you can build only the toolchain
+docker compose -f docker/compose.yaml up base -d
+
 ```
 
 After the script is done, you are ready to start using it:
@@ -71,11 +75,14 @@ The docker creates a folder called `'workspace/'` and some sub-folders like:
 - `tests/` useful for testing the instructions
 - `projects/` useful to develop approximate computing software.
 
-You can write your test files to `workspace/tests/`, like `addx.c`. Now, to compile it you need to enter the container (run `./scripts/dev shell` to enter shell) and run these commands:
+You can write your test files to `workspace/tests/`, like `addx.c`. Now, to compile it you need to enter the container  and run these commands:
 
 ```bash
-riscv32-unknown-elf-gcc /path/to/file.c -O1 -march=rv32imafdc -o file -lm 
-spike --isa=RV32IMAFDC /opt/riscv/riscv32-unknown-elf/bin/pk file
+riscv32-unknown-linux-gnu-gcc file.c -o file
+
+# Then simulate it:
+cd /opt/gem5/
+build/RISCV/gem5.opt simple_config.py file
 ```
 
 If you do not want to use Docker Compose, then the installation is done by hand following each step described below:
@@ -327,22 +334,91 @@ cp Approx_Instructions/*.c riscv-gnu-toolchain/spike/softfloat/
 
 ### 4. RISCV-GNU-TOOLCHAIN
 
+#### 4.1. Linux GNU (Recommended)
+
+If you need to use Linux Libs like pthread, follow these steps:
+
 - Enter the `riscv-gnu-toolchain` folder.
 - Check if the files `binutils/opcodes/riscv-opc.c`, `gdb/opcodes/riscv-opc.c`, `gdb/include/opcode/riscv-opc.h`, `binutils/include/opcode/riscv-opc.h` have the custom instructions definitions (see section 3.2).
-- Run the command below:
+
+Then, run the command below:
+
+```bash
+./configure --prefix=/opt/riscv-linux --with-arch=rv32imafdc --with-abi=ilp32d --disable-multilib
+sudo make linux -j$(nproc)
+```
+
+Export the riscv-gnu-toolchain for linux `bin/` folder:
+```bash
+export PATH=$PATH:/opt/riscv-linux/bin
+```
+
+#### 4.2. Bare-metal
+
+> If you are not going to use Bare-metal, you should skip this section and start installing gem5 in section 5.
+
+If you already did the first steps of section 4.1, just run the command below. Otherwise, do exactly the same as in section 4.1. The only difference is to run this command:
 
 ```bash
 ./configure --prefix=/opt/riscv --with-arch=rv32imafdc --with-abi=ilp32
 sudo make -j$(nproc)
 ```
 
-
 Export the riscv-gnu-toolchain `bin/` folder:
 ```bash
 export PATH=$PATH:/opt/riscv/bin
 ```
 
-### 5. RISCV-PK
+### 5. gem5
+
+gem5 is the most modern, versatily and modular tool for testing different architectures. To this date, we are primarily focused on going entirely to gem5 instead of spike.
+
+> If you are not interested in gem5, you can skip this section and follow section 6.
+
+First, download gem5's dependencies:
+
+```bash
+sudo apt-get install -y --no-install-recommends \
+    ca-certificates \
+    pre-commit \
+    zlib1g \
+    libprotobuf-dev \
+    protobuf-compiler \
+    libprotoc-dev \
+    libgoogle-perftools-dev \
+    libboost-all-dev \
+    libhdf5-serial-dev \
+    python3-pydot \
+    python3-tk \
+    mypy \
+    m4 \
+    libcapstone-dev \
+    libpng-dev \
+    libelf-dev \
+    pkg-config \
+    doxygen \
+    clang-format \
+    scons && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+```
+
+Second, install this specific gem5 version:
+
+```bash
+git clone --single-branch https://github.com/gem5/gem5.git && \
+    cd gem5 && \
+    git checkout ddd4ae3
+```
+
+Third, replace `gem5/src/arch/riscv/isa/decoder.isa` with our `patches/gem5/decoder.isa` and copy our `config/simple_config.py` to gem5's root folder.
+
+Forth, build gem5:
+
+```bash
+scons build/RISCV/gem5.opt -j $(nproc)
+```
+### 6. RISCV-PK (Only needed for SPIKE)
 
 - Enter the `riscv-gnu-toolchain/pk` folder.
 - Run the command below to configure and build:
@@ -354,7 +430,7 @@ make -j$(nproc)
 sudo make install
 ```
 
-### 6. RISCV-ISA-SIM (SPIKE)
+### 7. RISCV-ISA-SIM (SPIKE)
 
 - Enter the `riscv-gnu-toolchain/spike` folder.
 - Check if the files `riscv/riscv.mk.in`, `softfloat/softfloat.mk.in`, `softfloat/internals.h`, `softfloat/softfloat.h` have the custom instructions modifications (see section 3.3).

@@ -19,6 +19,11 @@ This repository provides a comprehensive guide for developing and implementing a
 
 The following guide should be followed in order to download, setup and use all the tools: [INSTALLING.md](./docs/INSTALLING.md)
 
+
+## Development
+
+You are welcome to contribute to this project! Take a look at our [development guide](./docs/DEVELOPMENT.md) before and make your PR!
+
 ## References
 
 ### Surveys
