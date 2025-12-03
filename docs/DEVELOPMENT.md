@@ -7,11 +7,36 @@ This repository houses a comprehensive environment for RISC-V simulation, focusi
 The project relies on specific toolchains and simulators to ensure consistent execution across bare metal and Linux environments.
 
   * **Architecture:** RISC-V 32-bit (`riscv32`).
+  * **RISC-V tools:** riscv-opcodes.
   * **Simulators:**
       * **gem5 (recommended):** Used for full-system simulation using the **Linux MUSL** library.
       * **Spike:** Used primarily for **Bare Metal** execution verification.
   * **Languages:** Python (Utilities), C/C++ (Source), Shell.
   * **Docker (recommended):** setting up all of these tools by hand is hard, and can possibly make the project platform-dependent. That's why we encourage you to use Docker primarily.
+
+### Generating opcodes
+
+If you need to add more custom instructions, you'll also need the opcodes of them. For that reason,
+we use riscv-opcodes generation tool:
+
+#### Downloading
+
+```bash
+git clone --single-branch https://github.com/riscv/riscv-opcodes &&
+  cd riscv-opcodes &&
+  git checkout 3deaa8c &&
+```
+
+**Generating:**
+- Run the command:
+
+```bash
+cp <your_custom_rv> ~/.local/opt/riscv-opcodes/extensions/unratified &&
+  cd ~/.local/opt/riscv-opcodes &&
+  make EXTENSIONS='unratified/rv*'
+```
+
+Change `<your_custom_rv>` to your rv containing the new custom instructions.
 
 ## Project Structure
 

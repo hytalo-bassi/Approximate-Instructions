@@ -128,7 +128,26 @@ sudo apt-get update && sudo apt-get install \
     wget \
     libboost-system-dev \
     libboost-regex-dev \
-    ca-certificates 
+    ca-certificates \
+    pre-commit \
+    zlib1g \
+    libprotobuf-dev \
+    protobuf-compiler \
+    libprotoc-dev \
+    libgoogle-perftools-dev \
+    libboost-all-dev \
+    libhdf5-serial-dev \
+    python3-pydot \
+    python3-tk \
+    mypy \
+    m4 \
+    libcapstone-dev \
+    libpng-dev \
+    libelf-dev \
+    pkg-config \
+    doxygen \
+    clang-format \
+    scons
 ```
 
 **Notes:** this command will change depending on your system. More informations are available [here](https://github.com/riscv-collab/riscv-gnu-toolchain).
@@ -138,31 +157,29 @@ sudo apt-get update && sudo apt-get install \
 First, we need to download the following repositories:
 
 * [RISC-V Toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain)
-* [RISC-V SPIKE](https://github.com/riscv-software-src/riscv-isa-sim)
-* [RISC-V Proxy Kernel](https://github.com/riscv-software-src/riscv-pk)
-* [RISC-V Opcodes](https://github.com/riscv/riscv-opcodes)
 * [binutils-gdb](https://github.com/bminor/binutils-gdb/tree/2bc7af1ff7732451b6a7b09462a815c3284f9613)
 * [gcc](https://github.com/gcc-mirror/gcc)
+* [gem5](https://github.com/gem5/gem5)
+* [RISC-V SPIKE (optional if using gem5)](https://github.com/riscv-software-src/riscv-isa-sim)
+* [RISC-V Proxy Kernel (only needed when using SPIKE)](https://github.com/riscv-software-src/riscv-pk)
+
 
 Run this command to download them:
-```bash
-git clone --depth=1 --single-branch https://github.com/riscv/riscv-gnu-toolchain.git && \
-git clone --depth=1 --single-branch https://github.com/riscv/riscv-opcodes && \
-cd riscv-gnu-toolchain && \
-git submodule update --init --depth=1 --recursive binutils gcc gdb spike pk
-```
-
-### 2. RISCV-OPCODES
-
-We are going to use that tool to generate the opcodes header file.
-
-**Generating:**
-- Enter the recently downloaded repository `riscv-opcodes`
-- Copy the `rv_approx` file from project's root and move it to the riscv-opcodes' `extensions/unratified` folder.
-- Run the command below:
 
 ```bash
-./parse.py -c 'unratified/rv_*'
+cd ~/.local/opt
+git clone --single-branch https://github.com/riscv/riscv-gnu-toolchain.git &&
+    cd riscv-gnu-toolchain &&
+    git checkout 75b35f8 && 
+    git submodule update --init --depth=1 --recursive binutils gcc gdb &&
+    # or if using spike
+    # git submodule update --init --depth=1 --recursive binutils gcc gdb spike pk
+    cd ../
+
+git clone --single-branch https://github.com/gem5/gem5.git && 
+    cd gem5 && 
+    git checkout ddd4ae3 &&
+    cd ../
 ```
 
 ### 3. Patching the toolchain
@@ -172,179 +189,60 @@ In order to set up our custom instructions we need to change several files:
 - `riscv-gnu-toolchain/gdb/opcodes/riscv-opc.c`
 - `riscv-gnu-toolchain/gdb/include/opcode/riscv-opc.h`
 - `riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h`
+- `gem5/src/arch/riscv/isa/decoder.isa`
+
+**If using spike:**
 - `riscv-gnu-toolchain/spike/riscv/riscv.mk.in`
 - `riscv-gnu-toolchain/spike/softfloat/softfloat.mk.in`
 - `riscv-gnu-toolchain/spike/softfloat/internals.h`
 - `riscv-gnu-toolchain/spike/softfloat/softfloat.h`
 
-Copy the custom instructions' definitions from the generated `riscv-opcodes/encoding.out.h`, they should look like:
-```c
-...
-// These comments are not really present at the encoding file, they're here to help you know where to place each code.
-// DECLARATION SECTION
-#define MATCH_ADDX 0x200002b
-#define MASK_ADDX  0xfe00707f
-#define MATCH_SUBX 0x200002f
-#define MASK_SUBX  0xfe00707f
-#define MATCH_MULX 0x2000073
-#define MASK_MULX  0xfe00707f
-#define MATCH_DIVX 0x2000077
-#define MASK_DIVX  0xfe00707f
-#define MATCH_REMX 0x200007b
-#define MASK_REMX  0xfe00707f
-#define MATCH_FADDX_S 0x80000053
-#define MASK_FADDX_S  0xfe00007f
-#define MATCH_FSUBX_S 0x88000053
-#define MASK_FSUBX_S  0xfe00007f
-#define MATCH_FMULX_S 0x90000053
-#define MASK_FMULX_S  0xfe00007f
-#define MATCH_FDIVX_S 0x98000053
-#define MASK_FDIVX_S  0xfe00007f
-// END OF DECLARATION SECTION
-...
-// INSTRUCTIONS SECTION
-DECLARE_INSN(addx, MATCH_ADDX, MASK_ADDX)
-DECLARE_INSN(subx, MATCH_SUBX, MASK_SUBX)
-DECLARE_INSN(mulx, MATCH_MULX, MASK_MULX)
-DECLARE_INSN(divx, MATCH_DIVX, MASK_DIVX)
-DECLARE_INSN(remx, MATCH_REMX, MASK_REMX)
-DECLARE_INSN(faddx_s, MATCH_FADDX_S, MASK_FADDX_S)
-DECLARE_INSN(fsubx_s, MATCH_FSUBX_S, MASK_FSUBX_S)
-DECLARE_INSN(fmulx_s, MATCH_FMULX_S, MASK_FMULX_S)
-DECLARE_INSN(fdivx_s, MATCH_FDIVX_S, MASK_FDIVX_S)
-// END OF INSTRUCTIONS SECTION
-...
+#### 3.1 Copying the patches
+
+To use the approximate instructions, just run this command to copy the patches to riscv-gnu-toolchain and gem5:
+
+```bash
+cp patches/riscv-gnu-toolchain/gdb/include/opcode/riscv-opc.h ~/.local/opt/riscv-gnu-toolchain/gdb/include/opcode/riscv-opc.h
+
+cp patches/riscv-gnu-toolchain/gdb/opcodes/riscv-opc.c ~/.local/opt/riscv-gnu-toolchain/gdb/opcodes/riscv-opc.c
+
+cp patches/riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h ~/.local/opt/riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h
+
+cp patches/riscv-gnu-toolchain/binutils/opcodes/riscv-opc.c ~/.local/opt/riscv-gnu-toolchainbinutils/opcodes/riscv-opc.c
+
+cp config/simple_config.py ~/.local/opt/gem5/
+
+cp patches/gem5/decoder.isa ~/.local/opt/gem5/src/arch/riscv/isa/decoder.isa
 ```
 
-#### 3.1 Patching binutils and gdb headers
+#### 3.2 Adding the instructions in spike
 
-Enter the files
-- `riscv-gnu-toolchain/gdb/include/opcode/riscv-opc.h`
-- `riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h`
-
-And find for the `#define RISCV_ENCODING_H` line in each file, copy the contents of the `// DECLARATIONS SECTION` after the line you found, ensure that you are following the header syntax.
-
-Then, look for the `#ifdef DECLARE_INSN` line in each file, copy the contents of the `// INSTRUCTIONS SECTION` after the line you found, ensure that you are following the header syntax.
-
-
-#### 3.2 Patching binutils and gdb c files
-
-Enter the files
-- `riscv-gnu-toolchain/binutils/opcodes/riscv-opc.c`
-- `riscv-gnu-toolchain/gdb/opcodes/riscv-opc.c`
-
-Look for `{0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}` line in each file, copy the following content BEFORE the line you found, ensure that you are following the C syntax, (for the `gdb` file remove the `_INX` ending):
-
-```c
-// Integer instructions
-{"addx",    0, INSN_CLASS_I, "d,s,t", MATCH_ADDX, MASK_ADDX, match_opcode, 0},
-{"subx",    0, INSN_CLASS_I, "d,s,t", MATCH_SUBX, MASK_SUBX, match_opcode, 0},
-{"mulx",    0, INSN_CLASS_I, "d,s,t", MATCH_MULX, MASK_MULX, match_opcode, 0},
-{"divx",    0, INSN_CLASS_I, "d,s,t", MATCH_DIVX, MASK_DIVX, match_opcode, 0},
-{"remx",    0, INSN_CLASS_I, "d,s,t", MATCH_REMX, MASK_REMX, match_opcode, 0},
-// Float instructions (remove the _INX ending in gdb files)
-{"faddx.s", 0, INSN_CLASS_F_INX, "D,S,T",   MATCH_FADDX_S|MASK_RM, MASK_FADDX_S|MASK_RM,   match_opcode, 0},
-{"faddx.s", 0, INSN_CLASS_F_INX, "D,S,T,m", MATCH_FADDX_S,         MASK_FADDX_S,           match_opcode, 0},
-{"fsubx.s", 0, INSN_CLASS_F_INX, "D,S,T",   MATCH_FSUBX_S|MASK_RM, MASK_FSUBX_S|MASK_RM,   match_opcode, 0},
-{"fsubx.s", 0, INSN_CLASS_F_INX, "D,S,T,m", MATCH_FSUBX_S,         MASK_FSUBX_S,           match_opcode, 0},
-{"fmulx.s", 0, INSN_CLASS_F_INX, "D,S,T",   MATCH_FMULX_S|MASK_RM, MASK_FMULX_S|MASK_RM,   match_opcode, 0},
-{"fmulx.s", 0, INSN_CLASS_F_INX, "D,S,T,m", MATCH_FMULX_S,         MASK_FMULX_S,           match_opcode, 0},
-{"fdivx.s", 0, INSN_CLASS_F_INX, "D,S,T",   MATCH_FDIVX_S|MASK_RM, MASK_FDIVX_S|MASK_RM,   match_opcode, 0},
-{"fdivx.s", 0, INSN_CLASS_F_INX, "D,S,T,m", MATCH_FDIVX_S,         MASK_FDIVX_S,           match_opcode, 0},
-```
-
-**Notes:** do not forget to remove the `_INX` ending from `gdb` files.
-
-
-#### 3.3 Patching spike files
-
-
-First, enter `riscv-gnu-toolchain/spike/riscv/riscv.mk.in` file, find the lines containing `riscv_insn_ext_i = \` and `riscv_insn_ext_f = \` and update it to look like this:
-```makefile
-riscv_insn_ext_i = \ # append before the list
-    addx \
-    subx \
-    mulx \
-    divx \
-    remx \
-    # ... other instructions
-
-riscv_insn_ext_f = \ # append before the list
-    faddx_s \
-    fsubx_s \
-    fmulx_s \
-    fdivx_s \
-    # ... other instructions
-```
-
-Second, enter `riscv-gnu-toolchain/spike/softfloat/softfloat.mk.in` find the line containing `softfloat_c_srcs = \` then edit:
-
-```makefile
-softfloat_c_srcs = \
-    # append these before the list
-    f32_addx.c \
-    f32_subx.c \
-    s_addMagsF32x.c \
-    s_subMagsF32x.c \
-    f32_mulx.c \
-    s_roundPackToF32x.c \
-    s_shortShiftRightJam64x \
-    f32_divx.c \
-```
-
-Third, enter `riscv-gnu-toolchain/spike/softfloat/internals.h` and edit:
-```c
-...
-float32_t softfloat_roundPackToF32( bool, int_fast16_t, uint_fast32_t ); // place the content after this line
-// For faddx and fsubx
-float32_t softfloat_addMagsF32x(uint_fast32_t, uint_fast32_t);
-float32_t softfloat_subMagsF32x(uint_fast32_t, uint_fast32_t);
-
-// For fmulx
-float32_t softfloat_roundPackToF32x(bool, int_fast16_t, uint_fast32_t);
-```
-
-Fourth, do the same to `riscv-gnu-toolchain/spike/softfloat/softfloat.h`:
-
-```c
-
-// Add these functions
-float32_t f32_addx(float32_t, float32_t);
-float32_t f32_subx(float32_t, float32_t);
-float32_t f32_mulx(float32_t, float32_t);
-float32_t f32_divx(float32_t, float32_t);
-
-// Before this line
-float32_t f32_add( float32_t, float32_t ); 
-
-```
-
-
-#### 3.4 Adding the instructions
+> If you are not using spike simulator, you can skip this section and go to section 4
 
 First, copy all the header files at `Approx_Instructions/` directory and place them at `riscv-gnu-toolchain/spike/riscv/insns/`:
 ```bash
-cp Approx_Instructions/*.h riscv-gnu-toolchain/spike/riscv/insns/ # execute this command on project's root
+cp Approx_Instructions/*.h ~/.local/opt/riscv-gnu-toolchain/spike/riscv/insns/ # execute this command on project's root
 ```
 
 Second, copy all the C files  in `Approx_Instructions/` directory and place them at `riscv-gnu-toolchain/spike/softfloat/`:
 ```bash
-cp Approx_Instructions/*.c riscv-gnu-toolchain/spike/softfloat/
+cp Approx_Instructions/*.c ~/.local/opt/riscv-gnu-toolchain/spike/softfloat/
 ```
 
 ### 4. RISCV-GNU-TOOLCHAIN
 
-#### 4.1. Linux GNU (Recommended)
+This is the most important part, and also the most time-taking one. Guarantee that you have done all the last steps correctly. This tool will produce all the remaining tools for us to build new softwares using custom instructions in RISC-V!
 
-If you need to use Linux Libs like pthread, follow these steps:
-
-- Enter the `riscv-gnu-toolchain` folder.
-- Check if the files `binutils/opcodes/riscv-opc.c`, `gdb/opcodes/riscv-opc.c`, `gdb/include/opcode/riscv-opc.h`, `binutils/include/opcode/riscv-opc.h` have the custom instructions definitions (see section 3.2).
-
-Then, run the command below:
+In order to set it up, run this command:
 
 ```bash
-./configure --prefix=/opt/riscv-linux --with-arch=rv32imafdc --with-abi=ilp32d --disable-multilib
+cd ~/.local/opt/riscv-gnu-toolchain
+
+cd gcc/ &&
+    ./contrib/download_prerequisites &&
+    cd ../
+
+sudo ./configure --prefix=/opt/riscv-linux --with-arch=rv32imafdc --with-abi=ilp32d --disable-multilib
 sudo make linux -j$(nproc)
 ```
 
@@ -371,53 +269,16 @@ export PATH=$PATH:/opt/riscv/bin
 
 ### 5. gem5
 
-gem5 is the most modern, versatily and modular tool for testing different architectures. To this date, we are primarily focused on going entirely to gem5 instead of spike.
+gem5 is a modern, versatile and modular tool for testing different architectures. To this date, we are primarily focused on going entirely to gem5 instead of spike.
 
 > If you are not interested in gem5, you can skip this section and follow section 6.
 
-First, download gem5's dependencies:
-
-```bash
-sudo apt-get install -y --no-install-recommends \
-    ca-certificates \
-    pre-commit \
-    zlib1g \
-    libprotobuf-dev \
-    protobuf-compiler \
-    libprotoc-dev \
-    libgoogle-perftools-dev \
-    libboost-all-dev \
-    libhdf5-serial-dev \
-    python3-pydot \
-    python3-tk \
-    mypy \
-    m4 \
-    libcapstone-dev \
-    libpng-dev \
-    libelf-dev \
-    pkg-config \
-    doxygen \
-    clang-format \
-    scons && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-```
-
-Second, install this specific gem5 version:
-
-```bash
-git clone --single-branch https://github.com/gem5/gem5.git && \
-    cd gem5 && \
-    git checkout ddd4ae3
-```
-
-Third, replace `gem5/src/arch/riscv/isa/decoder.isa` with our `patches/gem5/decoder.isa` and copy our `config/simple_config.py` to gem5's root folder.
-
-Forth, build gem5:
+Build gem5 with this command:
 
 ```bash
 scons build/RISCV/gem5.opt -j $(nproc)
 ```
+
 ### 6. RISCV-PK (Only needed for SPIKE)
 
 - Enter the `riscv-gnu-toolchain/pk` folder.
@@ -449,10 +310,7 @@ After installation, verify that all tools are properly installed by checking the
 
 ```bash
 # Check RISC-V GCC
-riscv32-unknown-elf-gcc --version
-
-# Check SPIKE
-spike --help
+riscv32-unknown-linux-gnu-gcc -v
 
 # Verify PATH
 echo $PATH
@@ -488,13 +346,13 @@ int main(){
 
 Test it (should not raise any error):
 ```bash
-riscv32-unknown-elf-gcc addx.c -O1 -march=rv32imafdc -o addx -lm 
-spike --isa=RV32IMAFDC /opt/riscv/riscv32-unknown-elf/bin/pk addx
+riscv32-unknown-linux-gnu-gcc file.c -o file 
+./~/.local/opt/gem5/build/RISCV/gem5.opt ~/.local/opt/gem5/simple_config.py file
 ```
 
 ## Important Notes
 
-- Ensure `/opt/riscv/bin` is added to your PATH environment variable
+- Ensure `/opt/riscv-linux/bin` is added to your PATH environment variable
 - The installation process may take considerable time, especially for the toolchain compilation
 
 
@@ -509,9 +367,3 @@ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get update
 sudo apt-get install -y gcc-13 g++-13
 ```
-
-> `Error when compiling riscv-gnu-toolchain: make: *** [Makefile:609: stamps/build-binutils-newlib] Error 2`
-
-**Solution**: check the header files and c-files changed at Step 3 and 4, their content might be out of position; specially for the header files: `DECLARE_INSN*` should be within `#ifdef DECLARE_INSN` and the last `#endif`.
-
-> When building Spike, if build errors occur (e.g., `HGATP_MODE_SV57X4` out of scope), check for missing declarations in the new instruction implementations (see section 3. Patching the toolchain).
