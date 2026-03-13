@@ -58,7 +58,7 @@ After installing docker and docker-compose, you can start the installation proce
 ```bash
 # if you are going to need gem5
 docker compose -f docker/compose.yaml up riscv-gem5 -d
-# if you do not a simulator, you can build only the toolchain
+# if you do not want a simulator, you can build only the toolchain
 docker compose -f docker/compose.yaml up base -d
 
 ```
@@ -69,20 +69,18 @@ After the script is done, you are ready to start using it:
 
 The docker creates a folder called `'workspace/'` and some sub-folders like:
 
-- `opcodes/` here are the custom opcodes
 - `binutils-patches/` the binutils patches
 - `gcc-patches/` the gcc patches
 - `tests/` useful for testing the instructions
-- `projects/` useful to develop approximate computing software.
 
 You can write your test files to `workspace/tests/`, like `addx.c`. Now, to compile it you need to enter the container  and run these commands:
 
 ```bash
-riscv32-unknown-linux-gnu-gcc file.c -o file
+riscv64-unknown-linux-musl-gcc -march=rv64imafdc -static file.c -o file
 
 # Then simulate it:
 cd /opt/gem5/
-build/RISCV/gem5.opt simple_config.py file
+build/RISCV/gem5.opt configs/deprecated/example/se.py -c file --num-cpus=3 --cpu-type=O3CPU --caches --l1d_size=32kB --l1d_assoc=2 --l1i_size=32kB --l1i_assoc=2 --l2_size=256kB --l2_assoc=2 --cpu-clock=1GHz
 ```
 
 If you do not want to use Docker Compose, then the installation is done by hand following each step described below:
@@ -170,15 +168,13 @@ Run this command to download them:
 cd ~/.local/opt
 git clone --single-branch https://github.com/riscv/riscv-gnu-toolchain.git &&
     cd riscv-gnu-toolchain &&
-    git checkout 75b35f8 && 
+    git checkout 98c8ec4 && 
     git submodule update --init --depth=1 --recursive binutils gcc gdb &&
-    # or if using spike
-    # git submodule update --init --depth=1 --recursive binutils gcc gdb spike pk
     cd ../
 
 git clone --single-branch https://github.com/gem5/gem5.git && 
     cd gem5 && 
-    git checkout ddd4ae3 &&
+    git checkout 7a2b0e4 &&
     cd ../
 ```
 
@@ -190,12 +186,6 @@ In order to set up our custom instructions we need to change several files:
 - `riscv-gnu-toolchain/gdb/include/opcode/riscv-opc.h`
 - `riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h`
 - `gem5/src/arch/riscv/isa/decoder.isa`
-
-**If using spike:**
-- `riscv-gnu-toolchain/spike/riscv/riscv.mk.in`
-- `riscv-gnu-toolchain/spike/softfloat/softfloat.mk.in`
-- `riscv-gnu-toolchain/spike/softfloat/internals.h`
-- `riscv-gnu-toolchain/spike/softfloat/softfloat.h`
 
 #### 3.1 Copying the patches
 
@@ -210,23 +200,7 @@ cp patches/riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h ~/.local/opt/
 
 cp patches/riscv-gnu-toolchain/binutils/opcodes/riscv-opc.c ~/.local/opt/riscv-gnu-toolchainbinutils/opcodes/riscv-opc.c
 
-cp config/simple_config.py ~/.local/opt/gem5/
-
 cp patches/gem5/decoder.isa ~/.local/opt/gem5/src/arch/riscv/isa/decoder.isa
-```
-
-#### 3.2 Adding the instructions in spike
-
-> If you are not using spike simulator, you can skip this section and go to section 4
-
-First, copy all the header files at `Approx_Instructions/` directory and place them at `riscv-gnu-toolchain/spike/riscv/insns/`:
-```bash
-cp Approx_Instructions/*.h ~/.local/opt/riscv-gnu-toolchain/spike/riscv/insns/ # execute this command on project's root
-```
-
-Second, copy all the C files  in `Approx_Instructions/` directory and place them at `riscv-gnu-toolchain/spike/softfloat/`:
-```bash
-cp Approx_Instructions/*.c ~/.local/opt/riscv-gnu-toolchain/spike/softfloat/
 ```
 
 ### 4. RISCV-GNU-TOOLCHAIN
@@ -242,8 +216,8 @@ cd gcc/ &&
     ./contrib/download_prerequisites &&
     cd ../
 
-sudo ./configure --prefix=/opt/riscv-linux --with-arch=rv32imafdc --with-abi=ilp32d --disable-multilib
-sudo make linux -j$(nproc)
+sudo ./configure --prefix=/opt/riscv-linux 
+sudo make musl -j$(nproc)
 ```
 
 Export the riscv-gnu-toolchain for linux `bin/` folder:
@@ -258,7 +232,7 @@ export PATH=$PATH:/opt/riscv-linux/bin
 If you already did the first steps of section 4.1, just run the command below. Otherwise, do exactly the same as in section 4.1. The only difference is to run this command:
 
 ```bash
-./configure --prefix=/opt/riscv --with-arch=rv32imafdc --with-abi=ilp32
+./configure --prefix=/opt/riscv 
 sudo make -j$(nproc)
 ```
 
@@ -279,38 +253,13 @@ Build gem5 with this command:
 scons build/RISCV/gem5.opt -j $(nproc)
 ```
 
-### 6. RISCV-PK (Only needed for SPIKE)
-
-- Enter the `riscv-gnu-toolchain/pk` folder.
-- Run the command below to configure and build:
-
-```bash
-mkdir build && cd build
-../configure --prefix=/opt/riscv --host=riscv32-unknown-elf --with-arch=rv32imafdc_zicsr_zifencei
-make -j$(nproc)
-sudo make install
-```
-
-### 7. RISCV-ISA-SIM (SPIKE)
-
-- Enter the `riscv-gnu-toolchain/spike` folder.
-- Check if the files `riscv/riscv.mk.in`, `softfloat/softfloat.mk.in`, `softfloat/internals.h`, `softfloat/softfloat.h` have the custom instructions modifications (see section 3.3).
-- Run the command below to configure and build:
-
-```bash
-mkdir build && cd build
-../configure --prefix=/opt/riscv
-make -j$(nproc)
-sudo make install
-```
-
 ## Verification
 
 After installation, verify that all tools are properly installed by checking their versions:
 
 ```bash
 # Check RISC-V GCC
-riscv32-unknown-linux-gnu-gcc -v
+riscv64-unknown-linux-musl-gcc -v
 
 # Verify PATH
 echo $PATH
@@ -322,7 +271,7 @@ Then verify if the approximate instructions are properly set by writing a test `
 #include <stdio.h>
 
 int main(){
-    int a, b, addx_result, subx_result;
+    int a, b, addx_result;
     a = 5;
     b = 2;
     
@@ -332,38 +281,20 @@ int main(){
         : [x] "r" (a), [y] "r" (b)
     );
     
-    asm volatile ( 
-        "subx   %[z], %[x], %[y]\n\t"
-        : [z] "=r" (subx_result)
-        : [x] "r" (a), [y] "r" (b)
-    );
-    
     printf("ADDX => 5+2=%d\n", addx_result);
-    printf("SUBX => 5-2=%d\n", subx_result);
     return 0;
 }
 ```
 
 Test it (should not raise any error):
 ```bash
-riscv32-unknown-linux-gnu-gcc file.c -o file 
-./~/.local/opt/gem5/build/RISCV/gem5.opt ~/.local/opt/gem5/simple_config.py file
+riscv64-unknown-linux-musl-gcc -march=rv64imafdc -static file.c -o file 
+./~/.local/opt/gem5/build/RISCV/gem5.opt configs/deprecated/example/se.py -c file
+    --num-cpus=3 --cpu-type=O3CPU --caches --l1d_size=32kB --l1d_assoc=2 
+    --l1i_size=32kB --l1i_assoc=2 --l2_size=256kB --l2_assoc=2 --cpu-clock=1GHz
 ```
 
 ## Important Notes
 
 - Ensure `/opt/riscv-linux/bin` is added to your PATH environment variable
 - The installation process may take considerable time, especially for the toolchain compilation
-
-
-## Troubleshooting
-
-> `g++ unrecognized command line option '-std=c++2a'; did you mean '-std=c++03'?.`
-
-**Solution**: update to gcc 13 and g++ 13
-
-```bash
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-sudo apt-get update
-sudo apt-get install -y gcc-13 g++-13
-```

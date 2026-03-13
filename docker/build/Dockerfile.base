@@ -72,9 +72,8 @@ RUN mkdir -p /root/riscv-dev
 WORKDIR /root/riscv-dev
 
 RUN git clone --depth=1 --single-branch https://github.com/riscv/riscv-gnu-toolchain.git && \
-    git clone --single-branch https://github.com/riscv/riscv-opcodes && \
     cd riscv-gnu-toolchain && \
-    git checkout 75b35f8 && \
+    git checkout 98c8ec4 && \
     git submodule update --init --depth=1 --recursive binutils gcc gdb
 
 WORKDIR /root/riscv-dev/riscv-gnu-toolchain
@@ -86,23 +85,18 @@ COPY patches/riscv-gnu-toolchain/binutils/opcodes/riscv-opc.c binutils/opcodes/r
 
 WORKDIR /root/riscv-dev
 
-COPY rv_approx riscv-opcodes/extensions/unratified/
-RUN cd riscv-opcodes && \
-    git checkout 3deaa8c && \
-    make EXTENSIONS='unratified/rv*'
-
 RUN cd riscv-gnu-toolchain && \
     cd gcc/ && \
     ./contrib/download_prerequisites && \
     cd ../ && \
-    ./configure --prefix=${RISCV_LINUX} --with-arch=rv32imafdc --with-abi=ilp32d --disable-multilib && \
-    make linux -j${BUILD_JOBS:-$(( ( $(nproc) + 1 ) / 2 ))}
+    ./configure --prefix=${RISCV_LINUX} && \
+    make musl -j${BUILD_JOBS:-$(( ( $(nproc) + 1 ) / 2 ))}
 
 RUN rm -rf /root/riscv-dev \
     /root/.cache \
     /tmp/*
 
-### This dockerfile stage lets available all riscv32 Linux
+### This dockerfile stage lets available all riscv64 Linux
 ### tools.
 
 FROM ubuntu:22.04 AS final
