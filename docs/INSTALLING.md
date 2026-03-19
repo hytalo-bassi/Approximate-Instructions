@@ -215,7 +215,7 @@ cd ~/.local/opt/riscv-gnu-toolchain
 cd gcc/ &&
     ./contrib/download_prerequisites &&
     cd ../
-
+# for the (deprecated) spike version stop here
 sudo ./configure --prefix=/opt/riscv-linux 
 sudo make musl -j$(nproc)
 ```
@@ -296,5 +296,5 @@ riscv64-unknown-linux-musl-gcc -march=rv64imafdc -static file.c -o file
 
 ## Important Notes
 
-- Ensure `/opt/riscv-linux/bin` is added to your PATH environment variable
+- In case you want to use SPIKE, there is non-maintained guide here
 - The installation process may take considerable time, especially for the toolchain compilation

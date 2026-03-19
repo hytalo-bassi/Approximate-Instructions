@@ -14,29 +14,15 @@ The project relies on specific toolchains and simulators to ensure consistent ex
   * **Languages:** Python (Utilities), C/C++ (Source), Shell.
   * **Docker (recommended):** setting up all of these tools by hand is hard, and can possibly make the project platform-dependent. That's why we encourage you to use Docker primarily.
 
-### Generating opcodes
+### Adding new instructions
 
-If you need to add more custom instructions, you'll also need the opcodes of them. For that reason,
-we use riscv-opcodes generation tool:
+If you have to add a new instruction, you are going to need to use riscv-opcodes for getting their new opcodes, and place the corresponding encoding.h in the right places.
 
-#### Downloading
+This version of the project have standardized the encodings available in `/patches`. You can use them as examples.
 
-```bash
-git clone --single-branch https://github.com/riscv/riscv-opcodes &&
-  cd riscv-opcodes &&
-  git checkout 3deaa8c &&
-```
+Instructions on how to use, patch, and test new instructions are found [here](SPIKE_INSTALLING.md#1-generating-custom-opcodes).
 
-**Generating:**
-- Run the command:
-
-```bash
-cp <your_custom_rv> ~/.local/opt/riscv-opcodes/extensions/unratified &&
-  cd ~/.local/opt/riscv-opcodes &&
-  make EXTENSIONS='unratified/rv*'
-```
-
-Change `<your_custom_rv>` to your rv containing the new custom instructions.
+The riscv-opcodes is going to need a text file for the instructions, just like this template file [rv32_approx](../patches/riscv-opcodes/extensions/unratified/rv32_approx)
 
 ## Project Structure
 
