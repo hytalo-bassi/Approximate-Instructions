@@ -71,10 +71,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /root/riscv-dev
 WORKDIR /root/riscv-dev
 
-RUN git clone --depth=1 --single-branch https://github.com/riscv/riscv-gnu-toolchain.git && \
+RUN git clone --single-branch https://github.com/riscv/riscv-gnu-toolchain.git && \
     cd riscv-gnu-toolchain && \
     git checkout 98c8ec4 && \
-    git submodule update --init --depth=1 --recursive binutils gcc gdb
+    git submodule update --init --recursive binutils gcc gdb
 
 WORKDIR /root/riscv-dev/riscv-gnu-toolchain
 
@@ -86,9 +86,6 @@ COPY patches/riscv-gnu-toolchain/binutils/opcodes/riscv-opc.c binutils/opcodes/r
 WORKDIR /root/riscv-dev
 
 RUN cd riscv-gnu-toolchain && \
-    cd gcc/ && \
-    ./contrib/download_prerequisites && \
-    cd ../ && \
     ./configure --prefix=${RISCV_LINUX} && \
     make musl -j${BUILD_JOBS:-$(( ( $(nproc) + 1 ) / 2 ))}
 

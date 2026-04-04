@@ -2079,7 +2079,36 @@ decode QUADRANT default Unknown::unknown() {
           }
         }
 
+        // Modification subx
         0x0b: decode FUNCT3 {
+	    format ROp {
+	        0x0: decode FUNCT7 {
+		    0x1: subx({{
+		        RegVal borrow = 0;   // This is Cout_{i-1} already left-shifted (i.e. aligned to bit i)
+		        RegVal result = 0;
+
+		        for (int i = 0; i < 64; i++) {
+		            RegVal mask = (RegVal)1 << i;
+		            RegVal xi   = Rs1_sw & mask;
+		            RegVal yi   = Rs2_sw & mask;
+
+		            // Compute carry-out (unshifted), then shift to align with next bit position
+		            RegVal cout_raw = (((xi ^ ~yi) & borrow) | (~xi & yi));
+		            RegVal cout     = cout_raw << 1;
+
+		            // Sum bit: uses borrow (== prev Cout shifted, i.e. Cin for this stage)
+		            RegVal si = ( (~xi & yi)
+		                	    | (yi  & borrow)
+		                	    | (~xi & borrow)
+		                	    | (xi  & ~yi & ~borrow) );
+		            result |= si;
+		            borrow  = cout;
+		        }
+
+		        Rd = sext<64>(result);
+		    }});     
+		}
+	    }
             0x2: decode AMOFUNCT {
                 0x2: LoadReserved::lr_w({{
                     Rd_sd = Mem_sw;
