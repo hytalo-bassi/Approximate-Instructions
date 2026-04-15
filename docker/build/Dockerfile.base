@@ -73,7 +73,7 @@ WORKDIR /root/riscv-dev
 
 RUN git clone --single-branch https://github.com/riscv/riscv-gnu-toolchain.git && \
     cd riscv-gnu-toolchain && \
-    git checkout 98c8ec4 && \
+    # git checkout 98c8ec4 && \ this version is not working
     git submodule update --init --recursive binutils gcc gdb
 
 WORKDIR /root/riscv-dev/riscv-gnu-toolchain
@@ -112,9 +112,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /opt/riscv-linux $RISCV_LINUX
 
-RUN find ${RISCV_LINUX} -name "*.la" -type f -delete && \
-    rm -rf ${RISCV_LINUX}/share/man ${RISCV_LINUX}/share/doc && \
-    strip --strip-unneeded ${RISCV_LINUX}/bin/* 2>/dev/null || true
+# GEM5 having problems with stripping the toolchain
+# RUN find ${RISCV_LINUX} -name "*.la" -type f -delete && \
+#     rm -rf ${RISCV_LINUX}/share/man ${RISCV_LINUX}/share/doc && \
+#     strip --strip-unneeded ${RISCV_LINUX}/bin/* 2>/dev/null || true
 
 RUN mkdir -p /workspace
 

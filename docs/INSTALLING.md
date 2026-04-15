@@ -56,6 +56,7 @@ To install the tools in a docker container you first need to install Docker and 
 After installing docker and docker-compose, you can start the installation process by running:
 
 ```bash
+docker compose -f docker/compose.yaml build base
 # if you are going to need gem5
 docker compose -f docker/compose.yaml up riscv-gem5 -d
 # if you do not want a simulator, you can build only the toolchain

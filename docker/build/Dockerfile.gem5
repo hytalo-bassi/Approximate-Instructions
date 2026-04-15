@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN git clone --single-branch https://github.com/gem5/gem5.git && \
     cd gem5 && \
-    git checkout 7a2b0e4
+    # git checkout 7a2b0e4 this is version is not working
 
 COPY patches/gem5/decoder.isa gem5/src/arch/riscv/isa/decoder.isa
 
