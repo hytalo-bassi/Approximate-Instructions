@@ -16,13 +16,13 @@ The project relies on specific toolchains and simulators to ensure consistent ex
 
 ### Adding new instructions
 
-If you have to add a new instruction, you are going to need to use riscv-opcodes for getting their new opcodes, and place the corresponding encoding.h in the right places.
+If you have to add a new instruction, you are going to need to use riscv-opcodes for getting their new opcodes, and place the corresponding encoding.h in the right places. 
 
-This version of the project have standardized the encodings available in `/patches`. You can use them as examples.
+- This version of the project have standardized the encodings available in `/patches`. You can use them as examples.
+- Instructions on how to use, patch, and test new instructions are found [here](SPIKE_INSTALLING.md#1-generating-custom-opcodes).
+- The riscv-opcodes is going to need a text file for the instructions, just like this template file [rv32_approx](../patches/riscv-opcodes/extensions/unratified/rv32_approx)
+- If you need help on how to break the bitfields, take a look at [this guide](./BITFIELDS.md); there is also a regex state there to help you.
 
-Instructions on how to use, patch, and test new instructions are found [here](SPIKE_INSTALLING.md#1-generating-custom-opcodes).
-
-The riscv-opcodes is going to need a text file for the instructions, just like this template file [rv32_approx](../patches/riscv-opcodes/extensions/unratified/rv32_approx)
 
 ## Project Structure
 
