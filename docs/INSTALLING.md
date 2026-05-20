@@ -62,6 +62,8 @@ docker compose -f docker/compose.yaml up riscv-gem5 -d
 # if you do not want a simulator, you can build only the toolchain
 docker compose -f docker/compose.yaml up base -d
 
+# enter in the container
+docker exec -it <riscv-gem5 or base> bash
 ```
 
 After the script is done, you are ready to start using it:
