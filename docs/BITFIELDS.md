@@ -41,3 +41,7 @@ Here is the [regex101](https://regex101.com/substitution?regex=%5E%28.%7B7%7D%29
 | subx  | 0000001 (0x1)   | 000 (0x0)       | 01011 (0xB)   | 11 (0x3)       | Approximate bitfield subtraction.   |
 | mulx  | 0000001 (0x1)   | 000 (0x0)       | 11100 (0x1C)  | 11 (0x3)       | Approximate bitfield multiplication.|
 | divx  | 0000001 (0x1)   | 000 (0x0)       | 11101 (0x1D)  | 11 (0x3)       | Approximate bitfield division.      |
+| faddx.s | 1000000 (0x40)   | 111 (0x7)       | 10100 (0x14)  | 11 (0x3)       | Approximate bitfield floating point add. |
+| fsubx.s | 1000100 (0x44)   | 111 (0x7)       | 10100 (0x14)  | 11 (0x3)       | Approximate bitfield floating point subtraction. |
+| fmulx.s | 1001000 (0x48)   | 111 (0x7)       | 10100 (0x14)  | 11 (0x3)       | Approximate bitfield floating point multiplication. |
+
