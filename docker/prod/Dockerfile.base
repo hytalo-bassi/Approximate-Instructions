@@ -1,0 +1,114 @@
+# Build this image as lscad/base-riscv-image
+FROM ubuntu:22.04@sha256:4f838adc7181d9039ac795a7d0aba05a9bd9ecd480d294483169c5def983b64d AS builder
+
+ARG BUILD_JOBS
+ARG RISCV_LINUX="/opt/riscv-linux"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    RISCV_LINUX="${RISCV_LINUX}" \
+    PATH="${RISCV_LINUX}/bin:/root/.local/bin:${PATH}"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    autoconf \
+    automake \
+    autotools-dev \
+    libtool \
+    git \
+    make \
+    cmake \
+    bison \
+    flex \
+    gawk \
+    texinfo \
+    gperf \
+    patchutils \
+    bc \
+    libmpc-dev \
+    libmpfr-dev \
+    libgmp-dev \
+    zlib1g-dev \
+    libexpat1-dev \
+    libzstd-dev \
+    unzip \
+    python3 \
+    python3-dev \
+    device-tree-compiler \
+    curl \
+    libisl-dev \
+    ca-certificates \
+    m4 \
+    libelf-dev \
+    pkg-config \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /root/riscv-dev
+
+RUN git clone --depth=1 --single-branch \
+        https://github.com/riscv/riscv-gnu-toolchain.git && \
+    cd riscv-gnu-toolchain && \
+    git submodule update --init --recursive --depth=1 binutils gcc gdb
+
+
+WORKDIR /root/riscv-dev/riscv-gnu-toolchain
+
+COPY patches/riscv-gnu-toolchain/gdb/include/opcode/riscv-opc.h         gdb/include/opcode/riscv-opc.h
+COPY patches/riscv-gnu-toolchain/gdb/opcodes/riscv-opc.c                gdb/opcodes/riscv-opc.c
+COPY patches/riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h    binutils/include/opcode/riscv-opc.h
+COPY patches/riscv-gnu-toolchain/binutils/opcodes/riscv-opc.c           binutils/opcodes/riscv-opc.c
+
+WORKDIR /root/riscv-dev
+
+RUN cd riscv-gnu-toolchain && \
+    ./configure --prefix=${RISCV_LINUX} && \
+    make musl -j${BUILD_JOBS:-$(( ( $(nproc) + 1 ) / 2 ))}
+
+# Strip everything except the binaries GEM5 inspects at the ELF level.
+# Add specific filenames to the exclusion list as you discover them.
+RUN find "${RISCV_LINUX}/bin" "${RISCV_LINUX}/libexec" \
+         -type f \( -executable -o -name "*.so*" \) \
+         ! -name "riscv64-unknown-linux-musl-gdb" \
+    -exec strip --strip-unneeded {} + 2>/dev/null || true; \
+    find "${RISCV_LINUX}" -name "*.la" -delete; \
+    rm -rf \
+        "${RISCV_LINUX}/share/man" \
+        "${RISCV_LINUX}/share/doc" \
+        "${RISCV_LINUX}/share/info" \
+        /root/riscv-dev \
+        /root/.cache \
+        /tmp/*
+
+### This dockerfile stage lets available all riscv64 Linux
+### tools.
+
+FROM debian:bookworm-slim AS final
+
+ENV RISCV_LINUX="/opt/riscv-linux" \
+    PATH="${RISCV_LINUX}/bin:${PATH}"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmpc3 \
+    libmpfr6 \
+    libisl23 \
+    libgmp10 \
+    libstdc++6 \
+    libzstd1 \
+    zlib1g \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder ${RISCV_LINUX} ${RISCV_LINUX}
+
+WORKDIR /workspace
+
+RUN groupadd --gid 1000 riscv && \
+    useradd --uid 1000 --gid riscv --shell /bin/bash --create-home riscv && \
+    mkdir -p /workspace && \
+    chown riscv:riscv /workspace
+
+# Metadata
+LABEL org.opencontainers.image.description="RISC-V toolchain with approximate computing instructions" \
+    org.opencontainers.image.version="1.0" \
+    org.opencontainers.image.base.name="debian:bookworm-slim"
+
