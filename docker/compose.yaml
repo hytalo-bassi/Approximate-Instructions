@@ -14,8 +14,8 @@ services:
       context: ..
       dockerfile: docker/build/Dockerfile.gem5
     image: lscad/build-riscv-gem5:latest
-    depends_on:
-      - base
+    # depends_on:
+    #   - base
     container_name: riscv-gem5
     volumes:
       - shared-workspace:/workspace:rw
@@ -34,8 +34,6 @@ services:
       context: ..
       dockerfile: docker/prod/Dockerfile.base
     image: lscad/base-riscv-toolchain-prod:latest
-    environment:
-      - PATH=/opt/riscv-linux/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
   riscv-gem5-prod:
     build: 
@@ -54,7 +52,6 @@ services:
     environment:
       - UMASK=000
       - RISCV=/opt/riscv
-      - PATH=/opt/riscv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     command: /bin/bash -c "chmod -R 777 /workspace && umask 000 && /bin/bash"
 
 volumes:

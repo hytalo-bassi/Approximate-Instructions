@@ -2,6 +2,8 @@ FROM lscad/base-riscv-image:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 ARG BUILD_JOBS
+ARG SCONS_BUILD_ARG
+ARG CUSTOM_PACKAGES_APT_ARG
 
 WORKDIR /opt
 
@@ -30,7 +32,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     cmake \
     doxygen \
-    clang-format && \
+    clang-format \
+    ${CUSTOM_PACKAGES_APT_ARG} && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -41,8 +44,12 @@ RUN git clone https://github.com/gem5/gem5.git && \
 RUN rm -rf /opt/gem5/src/arch/riscv/isa/decoder.isa
 
 COPY patches/gem5/decoder.isa gem5/src/arch/riscv/isa/decoder.isa
+COPY patches/gem5/ext/softfloat/* gem5/ext/softfloat/
 
 RUN cd gem5 && \
-    scons build/RISCV/gem5.fast --linker=gold -j ${BUILD_JOBS:-$(( ( $(nproc) + 1 ) / 2 ))}
-
+    if [ -n "${SCONS_BUILD_ARG}" ]; then \
+        scons build/RISCV/gem5.fast ${SCONS_BUILD_ARG}; \
+    else \
+        scons build/RISCV/gem5.fast --linker=gold -j ${BUILD_JOBS:-$(( ( $(nproc) + 1 ) / 2 ))}; \
+    fi
 WORKDIR /workspace

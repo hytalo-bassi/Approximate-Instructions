@@ -43,8 +43,8 @@ static inline int divx(int a, int b) {
 }
 
 /* Floating-point approximate instructions */
-static inline double faddx(double a, double b) {
-    double result;
+static inline float faddx(float a, float b) {
+    float result;
     asm volatile (
         "faddx.s %[z], %[x], %[y]\n\t"
         : [z] "=f" (result)

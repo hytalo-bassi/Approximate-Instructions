@@ -2074,7 +2074,18 @@ decode QUADRANT default Unknown::unknown() {
         0xa: decode FUNCT3 {
           format ROp {
             0x0: decode FUNCT7 {
-              0x1: addx({{ Rd_sd = Rs1_sd ^ Rs2_sd; }});
+              0x1: addx({{
+                RegVal result = 0;
+                for (int i = 0; i < 64; i++) {
+                    RegVal mask = (RegVal)1 << i;
+                    RegVal xi   = Rs1_sw & mask;
+		            RegVal yi   = Rs2_sw & mask;
+
+                    result |= (xi ^ yi);
+                }
+                
+                Rd = sext<64>(result);
+              }});
             }
           }
         }
@@ -3235,7 +3246,6 @@ decode QUADRANT default Unknown::unknown() {
                     freg_t fd;
                     RM_REQUIRED;
                     fd = freg(f64_sqrt(f64(freg(Fs1_bits))));
-                    Fd_bits = fd.v;
                 }}, FloatSqrtOp);
                 0x2e: fsqrt_h({{
                     if (RS2 != 0) {
@@ -3247,6 +3257,17 @@ decode QUADRANT default Unknown::unknown() {
                     fd = freg(f16_sqrt(f16(freg(Fs1_bits))));
                     Fd_bits = fd.v;
                 }}, FloatSqrtOp);
+                // Modification: faddx.s 
+                0x40: decode FUNCT3 {
+                    // Modification: faddx_s (for 32 bit)
+                    0x7: faddx_s({{
+                        RM_REQUIRED;
+                        freg_t fd;
+                        fd = freg(f32_addx(f32(freg(Fs1_bits)),
+                                      f32(freg(Fs2_bits))));
+                        Fd_bits = fd.v;
+                    }}, FloatAddOp);
+                }
                 0x50: decode ROUND_MODE {
                     0x0: fle_s({{
                         Rd = f32_le(f32(freg(Fs1_bits)), f32(freg(Fs2_bits)));
