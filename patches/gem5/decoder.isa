@@ -3247,6 +3247,15 @@ decode QUADRANT default Unknown::unknown() {
                     fd = freg(f16_sqrt(f16(freg(Fs1_bits))));
                     Fd_bits = fd.v;
                 }}, FloatSqrtOp);
+                0x40: decode FUNCT3 {
+                    // Modification: faddx_s (for 32 bit)
+                    0x7: faddx_s({{
+                        freg_t fd;
+                        fd = freg(f32_addx(f32(freg(Fs1_bits)),
+                                      f32(freg(Fs2_bits))));
+                        Fd_bits = fd.v;
+                    }}, FloatAddOp);
+                }
                 0x50: decode ROUND_MODE {
                     0x0: fle_s({{
                         Rd = f32_le(f32(freg(Fs1_bits)), f32(freg(Fs2_bits)));
