@@ -123,6 +123,10 @@ float32_t softfloat_addMagsF32x( uint_fast32_t, uint_fast32_t );
 float32_t softfloat_subMagsF32x( uint_fast32_t, uint_fast32_t );
 float32_t softfloat_addMagsF32( uint_fast32_t, uint_fast32_t );
 
+// Path: shortShiftRightJam64x / roundPackToF32x Approximate
+uint64_t softfloat_shortShiftRightJam64x( uint64_t a, uint_fast8_t dist );
+float32_t softfloat_roundPackToF32x( bool sign, int_fast16_t exp, uint_fast32_t sig );
+
 float32_t softfloat_subMagsF32( uint_fast32_t, uint_fast32_t );
 float32_t
  softfloat_mulAddF32(

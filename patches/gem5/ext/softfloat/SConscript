@@ -90,11 +90,16 @@ SoftfloatFile('f16_to_ui64.c')
 SoftfloatFile('f16_to_ui64_r_minMag.c')
 SoftfloatFile('f16_to_ui8.c')
 SoftfloatFile('f32_add.c')
-# Patch: f32_addx, subMagsF32x, addMagsF32x are added for approximate instructions
+# Patch: f32_addx, subMagsF32x, addMagsF32x, and the others
+# are added for approximate instructions
 # The listing order is important, as f32_addx depends on the other two files.
 SoftfloatFile('s_subMagsF32x.c')
 SoftfloatFile('s_addMagsF32x.c')
+SoftfloatFile('s_roundPackToF32x.c')
+SoftfloatFile('s_shortShiftRightJam64x.c')
 SoftfloatFile('f32_addx.c')
+SoftfloatFile('f32_subx.c')
+SoftfloatFile('f32_mulx.c')
 
 SoftfloatFile('f32_classify.c')
 SoftfloatFile('f32_div.c')

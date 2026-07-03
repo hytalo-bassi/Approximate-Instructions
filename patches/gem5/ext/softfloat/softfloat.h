@@ -205,8 +205,10 @@ void f32_to_extF80M( float32_t, extFloat80_t * );
 void f32_to_f128M( float32_t, float128_t * );
 float32_t f32_roundToInt( float32_t, uint_fast8_t, bool );
 float32_t f32_add( float32_t, float32_t );
-// Patch: f32_addx
+// Patch: f32_addx / f32_subx / f32_mulx
 float32_t f32_addx( float32_t, float32_t );
+float32_t f32_subx( float32_t, float32_t );
+float32_t f32_mulx( float32_t, float32_t );
 
 float32_t f32_sub( float32_t, float32_t );
 float32_t f32_max( float32_t, float32_t );

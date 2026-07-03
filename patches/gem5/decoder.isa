@@ -3256,6 +3256,24 @@ decode QUADRANT default Unknown::unknown() {
                         Fd_bits = fd.v;
                     }}, FloatAddOp);
                 }
+                0x44: decode FUNCT3 {
+                    // Modification: fsubx_s (for 32 bit)
+                    0x7: fsubx_s({{
+                        freg_t fd;
+                        fd = freg(f32_subx(f32(freg(Fs1_bits)),
+                                      f32(freg(Fs2_bits))));
+                        Fd_bits = fd.v;
+                    }}, FloatAddOp);
+                }
+                0x48: decode FUNCT3 {
+                    // Modification: fmulx_s (for 32 bit)
+                    0x7: fmulx_s({{
+                        freg_t fd;
+                        fd = freg(f32_mulx(f32(freg(Fs1_bits)),
+                                      f32(freg(Fs2_bits))));
+                        Fd_bits = fd.v;
+                    }}, FloatAddOp);
+                }
                 0x50: decode ROUND_MODE {
                     0x0: fle_s({{
                         Rd = f32_le(f32(freg(Fs1_bits)), f32(freg(Fs2_bits)));
