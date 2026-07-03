@@ -3257,13 +3257,29 @@ decode QUADRANT default Unknown::unknown() {
                     fd = freg(f16_sqrt(f16(freg(Fs1_bits))));
                     Fd_bits = fd.v;
                 }}, FloatSqrtOp);
-                // Modification: faddx.s 
                 0x40: decode FUNCT3 {
                     // Modification: faddx_s (for 32 bit)
                     0x7: faddx_s({{
-                        RM_REQUIRED;
                         freg_t fd;
                         fd = freg(f32_addx(f32(freg(Fs1_bits)),
+                                      f32(freg(Fs2_bits))));
+                        Fd_bits = fd.v;
+                    }}, FloatAddOp);
+                }
+                0x44: decode FUNCT3 {
+                    // Modification: fsubx_s (for 32 bit)
+                    0x7: fsubx_s({{
+                        freg_t fd;
+                        fd = freg(f32_subx(f32(freg(Fs1_bits)),
+                                      f32(freg(Fs2_bits))));
+                        Fd_bits = fd.v;
+                    }}, FloatAddOp);
+                }
+                0x48: decode FUNCT3 {
+                    // Modification: fmulx_s (for 32 bit)
+                    0x7: fmulx_s({{
+                        freg_t fd;
+                        fd = freg(f32_mulx(f32(freg(Fs1_bits)),
                                       f32(freg(Fs2_bits))));
                         Fd_bits = fd.v;
                     }}, FloatAddOp);

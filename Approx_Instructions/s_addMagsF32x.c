@@ -104,7 +104,7 @@ float32_t softfloat_addMagsF32x( uint_fast32_t uiA, uint_fast32_t uiB )
             expZ = expB;
             //**************Cenário ELSE***************************
             //sigA += expA ? 0x20000000 : sigA;//ORIG
-            sigA = sigA ^ expA ? 0x20000000 : sigA;//Cenário 3
+            sigA = (sigA ^ expA) ? 0x20000000 : sigA;//Cenário 3
             //*********************************************
             sigA = softfloat_shiftRightJam32( sigA, -expDiff );
         } else {
@@ -116,7 +116,7 @@ float32_t softfloat_addMagsF32x( uint_fast32_t uiA, uint_fast32_t uiB )
             expZ = expA;
             //**************Cenário ELSE***************************
             //sigB += expB ? 0x20000000 : sigB;//ORIG
-            sigB = sigB ^ expB ? 0x20000000 : sigB;//Cenário 3
+            sigB = (sigB ^ expB) ? 0x20000000 : sigB;//Cenário 3
             //*********************************************
             sigB = softfloat_shiftRightJam32( sigB, expDiff );
         }
@@ -129,6 +129,8 @@ float32_t softfloat_addMagsF32x( uint_fast32_t uiA, uint_fast32_t uiB )
             sigZ <<= 1;
         }
     }
+    printf("[APPROXIMATE INJECTION] Executing approximate mantissa addition!\n");
+
     return softfloat_roundPackToF32( signZ, expZ, sigZ );
     /*------------------------------------------------------------------------
     *------------------------------------------------------------------------*/
