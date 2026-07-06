@@ -33,10 +33,10 @@ ARG GEM5_COMMIT=7a2b0e4
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         zlib1g \
-        libprotobuf32 \
+        libprotobuf23 \
         libgoogle-perftools4 \
-        libboost-filesystem1.81.0 \
-        libboost-regex1.81.0 \
+        libboost-filesystem1.74.0 \
+        libboost-regex1.74.0 \
         libhdf5-103-1 \
         libcapstone4 \
         libpng16-16 \
