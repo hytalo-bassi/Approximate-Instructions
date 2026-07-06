@@ -1,11 +1,12 @@
 # ── Stage 1: builder ────────────────────────────────────────────────
-FROM lscad/gem5-base:latest AS builder
+ARG GEM5_BASE_TAG=latest
+FROM ghcr.io/hytalo-bassi/gem5-base:${GEM5_BASE_TAG} AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG GEM5_COMMIT=7a2b0e4
 ARG RISCV_LINUX="/opt/riscv-linux"
 ARG BUILD_JOBS
 
-COPY patches/gem5/decoder.isa               /opt/gem5/src/arch/riscv/isa/decoder.isa
 COPY patches/gem5/decoder.isa               /opt/gem5/src/arch/riscv/isa/decoder.isa
 COPY patches/gem5/ext/softfloat/SConscript   /opt/gem5/ext/softfloat/SConscript
 COPY patches/gem5/ext/softfloat/internals.h  /opt/gem5/ext/softfloat/internals.h
@@ -24,7 +25,8 @@ RUN cd gem5 && \
     cd /opt && rm -rf gem5
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────
-FROM lscad/base-riscv-toolchain-prod:latest
+ARG RISCV_PROD_TAG=latest
+FROM ghcr.io/hytalo-bassi/riscv-prod:${RISCV_PROD_TAG}
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG GEM5_COMMIT=7a2b0e4

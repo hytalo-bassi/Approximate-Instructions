@@ -1,4 +1,5 @@
-FROM ghcr.io/hytalo-bassi/riscv-prod:latest
+ARG RISCV_PROD_TAG=latest
+FROM ghcr.io/hytalo-bassi/riscv-prod:${RISCV_PROD_TAG}
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG GEM5_COMMIT=7a2b0e4
