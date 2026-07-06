@@ -1,5 +1,6 @@
 # ── Stage 1: builder ────────────────────────────────────────────────
 ARG GEM5_BASE_TAG=latest
+ARG RISCV_PROD_TAG=latest
 FROM ghcr.io/hytalo-bassi/gem5-base:${GEM5_BASE_TAG} AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -25,7 +26,6 @@ RUN cd gem5 && \
     cd /opt && rm -rf gem5
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────
-ARG RISCV_PROD_TAG=latest
 FROM ghcr.io/hytalo-bassi/riscv-prod:${RISCV_PROD_TAG}
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -58,4 +58,4 @@ ENV PATH="${RISCV_LINUX}/bin:${PATH}"
 LABEL org.opencontainers.image.description="gem5 RISC-V fast simulator (patched decoder)" \
       org.opencontainers.image.version="1.0" \
       org.opencontainers.image.revision="${GEM5_COMMIT}" \
-      org.opencontainers.image.base.name="lscad/base-riscv-toolchain-prod"
+      org.opencontainers.image.base.name="ghcr.io/hytalo-bassi/riscv-prod"
