@@ -8,7 +8,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     RISCV_LINUX="${RISCV_LINUX}" \
     PATH="${RISCV_LINUX}/bin:/root/.local/bin:${PATH}"
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     autoconf \
     automake \
@@ -39,9 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     m4 \
     libelf-dev \
-    pkg-config \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    pkg-config
 
 WORKDIR /root/riscv-dev
 
@@ -64,36 +64,21 @@ RUN cd riscv-gnu-toolchain && \
     ./configure --prefix=${RISCV_LINUX} && \
     make musl -j${BUILD_JOBS:-$(( ( $(nproc) + 1 ) / 2 ))}
 
-# Strip everything except the binaries GEM5 inspects at the ELF level.
-# Add specific filenames to the exclusion list as you discover them.
-RUN find "${RISCV_LINUX}/bin" "${RISCV_LINUX}/libexec" \
-         -type f \( -executable -o -name "*.so*" \) \
-         ! -name "riscv64-unknown-linux-musl-gdb" \
-    -exec strip --strip-unneeded {} + 2>/dev/null || true; \
-    find "${RISCV_LINUX}" -name "*.la" -delete; \
-    rm -rf \
-        "${RISCV_LINUX}/share/man" \
-        "${RISCV_LINUX}/share/doc" \
-        "${RISCV_LINUX}/share/info" \
-        /root/riscv-dev \
-        /root/.cache \
-        /tmp/*
-
 ### This dockerfile stage lets available all riscv64 Linux
 ### tools.
 
-FROM debian:bookworm-slim AS final
+FROM ubuntu:22.04@sha256:4f838adc7181d9039ac795a7d0aba05a9bd9ecd480d294483169c5def983b64d AS final
 
 ENV RISCV_LINUX="/opt/riscv-linux" \
-    PATH="${RISCV_LINUX}/bin:${PATH}"
+    PATH="/opt/riscv-linux/bin:${PATH}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmpc3 \
     libmpfr6 \
-    libisl23 \
+    libisl-dev \
     libgmp10 \
     libstdc++6 \
-    libzstd1 \
+    libzstd-dev \
     zlib1g \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -102,13 +87,10 @@ COPY --from=builder ${RISCV_LINUX} ${RISCV_LINUX}
 
 WORKDIR /workspace
 
-RUN groupadd --gid 1000 riscv && \
-    useradd --uid 1000 --gid riscv --shell /bin/bash --create-home riscv && \
-    mkdir -p /workspace && \
-    chown riscv:riscv /workspace
+RUN mkdir -p /workspace
 
 # Metadata
 LABEL org.opencontainers.image.description="RISC-V toolchain with approximate computing instructions" \
     org.opencontainers.image.version="1.0" \
-    org.opencontainers.image.base.name="debian:bookworm-slim"
+    org.opencontainers.image.base.name="ubuntu:22.04"
 

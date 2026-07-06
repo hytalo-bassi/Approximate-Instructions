@@ -1,0 +1,40 @@
+FROM ghcr.io/hytalo-bassi/riscv-prod:latest
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG GEM5_COMMIT=7a2b0e4
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    build-essential \
+    scons \
+    python3-dev \
+    zlib1g-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
+    libprotoc-dev \
+    libgoogle-perftools-dev \
+    libboost-dev \
+    libboost-system-dev \
+    libboost-filesystem-dev \
+    libboost-regex-dev \
+    libboost-iostreams-dev \
+    libhdf5-serial-dev \
+    python3-venv \
+    m4 \
+    libcapstone-dev \
+    libpng-dev \
+    libelf-dev \
+    pkg-config \
+    cmake
+
+WORKDIR /opt
+
+RUN git clone https://github.com/gem5/gem5.git && \
+    cd gem5 && \
+    git checkout ${GEM5_COMMIT}
+
+LABEL org.opencontainers.image.description="gem5 base image for RISC-V" \
+      org.opencontainers.image.version="1.0" \
+      org.opencontainers.image.revision="${GEM5_COMMIT}"

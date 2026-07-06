@@ -73,25 +73,20 @@ WORKDIR /root/riscv-dev
 
 RUN git clone --single-branch https://github.com/riscv/riscv-gnu-toolchain.git && \
     cd riscv-gnu-toolchain && \
-    # git checkout 98c8ec4 && \ this version is not working
     git submodule update --init --recursive binutils gcc gdb
 
 WORKDIR /root/riscv-dev/riscv-gnu-toolchain
 
-COPY patches/riscv-gnu-toolchain/gdb/include/opcode/riscv-opc.h gdb/include/opcode/riscv-opc.h
-COPY patches/riscv-gnu-toolchain/gdb/opcodes/riscv-opc.c gdb/opcodes/riscv-opc.c
-COPY patches/riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h binutils/include/opcode/riscv-opc.h
-COPY patches/riscv-gnu-toolchain/binutils/opcodes/riscv-opc.c binutils/opcodes/riscv-opc.c
+COPY patches/riscv-gnu-toolchain/gdb/include/opcode/riscv-opc.h         gdb/include/opcode/riscv-opc.h
+COPY patches/riscv-gnu-toolchain/gdb/opcodes/riscv-opc.c                gdb/opcodes/riscv-opc.c
+COPY patches/riscv-gnu-toolchain/binutils/include/opcode/riscv-opc.h    binutils/include/opcode/riscv-opc.h
+COPY patches/riscv-gnu-toolchain/binutils/opcodes/riscv-opc.c           binutils/opcodes/riscv-opc.c
 
 WORKDIR /root/riscv-dev
 
 RUN cd riscv-gnu-toolchain && \
     ./configure --prefix=${RISCV_LINUX} && \
     make musl -j${BUILD_JOBS:-$(( ( $(nproc) + 1 ) / 2 ))}
-
-# RUN rm -rf /root/riscv-dev \
-#     /root/.cache \
-#     /tmp/*
 
 ### This dockerfile stage lets available all riscv64 Linux
 ### tools.
@@ -111,15 +106,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt/riscv-linux $RISCV_LINUX
-
-# GEM5 having problems with stripping the toolchain
-# RUN find ${RISCV_LINUX} -name "*.la" -type f -delete && \
-#     rm -rf ${RISCV_LINUX}/share/man ${RISCV_LINUX}/share/doc && \
-#     strip --strip-unneeded ${RISCV_LINUX}/bin/* 2>/dev/null || true
-
-RUN mkdir -p /workspace
-
-WORKDIR /workspace
 
 # Metadata
 LABEL description="RISC-V toolchain with approximate computing instructions" \
