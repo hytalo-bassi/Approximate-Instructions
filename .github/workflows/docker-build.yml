@@ -148,4 +148,4 @@ jobs:
       - name: Smoke test gem5-full
         run: |
           docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/gem5-full:sha-${{ github.sha }} \
-            gem5.fast --version
+            gem5.fast --build-info
