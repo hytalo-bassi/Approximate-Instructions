@@ -34,6 +34,8 @@ ARG GEM5_COMMIT=7a2b0e4
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         zlib1g \
+        libpython3.10 \
+        libhdf5-cpp-103-1 \
         libprotobuf23 \
         libgoogle-perftools4 \
         libboost-filesystem1.74.0 \
@@ -51,6 +53,16 @@ COPY --from=builder /opt/gem5-configs /srv/gem5/configs
 RUN chmod 755 /usr/local/bin/gem5.fast
 
 RUN mkdir -p /workspace
+
+RUN echo '\n\
+echo "─────────────────────────────────────────────"\n\
+echo " gem5.fast RISC-V Approximate Computing Image"\n\
+echo "─────────────────────────────────────────────"\n\
+echo " Binary:   gem5.fast"\n\
+echo " Configs:   /srv/gem5/configs"\n\
+echo " Run:      gem5.fast /srv/gem5/configs/<your_config>.py"\n\
+echo "─────────────────────────────────────────────"\n\
+' >> /root/.bashrc
 
 WORKDIR /workspace
 

@@ -1,60 +1,43 @@
-# choose the service with
-# docker compose -f docker/compose.yaml up <service_name> -d
 services:
-  base:
-    build:
-      context: ..
-      dockerfile: docker/build/Dockerfile.base
-    image: lscad/base-riscv-image:latest
-    environment:
-      - PATH=/opt/riscv-linux/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-  riscv-gem5:
-    build: 
-      context: ..
-      dockerfile: docker/build/Dockerfile.gem5
-    image: lscad/build-riscv-gem5:latest
-    # depends_on:
-    #   - base
-    container_name: riscv-gem5
+  toolchain:
+    image: ghcr.io/hytalo-bassi/riscv-prod:latest
+    working_dir: /opt
     volumes:
       - shared-workspace:/workspace:rw
-      - shared-workspace-projects:/projects:rw
-    working_dir: /workspace
-    tty: true
-    stdin_open: true
-    environment:
-      - UMASK=000
-      - RISCV=/opt/riscv
-      - PATH=/opt/riscv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    command: /bin/bash -c "chmod -R 777 /workspace && umask 000 && /bin/bash"
-  
-  base-prod:
-    build:
-      context: ..
-      dockerfile: docker/prod/Dockerfile.base
-    image: lscad/base-riscv-toolchain-prod:latest
+    command: >
+      bash -c "
+      sleep infinity"
 
-  riscv-gem5-prod:
-    build: 
-        context: ..
-        dockerfile: docker/prod/Dockerfile.gem5
-    image: lscad/build-riscv-gem5-prod:latest
-    depends_on:
-      - base-prod
-    container_name: riscv-gem5-prod
+  gem5-base:
+    image: ghcr.io/hytalo-bassi/gem5-base:latest
+    working_dir: /opt/gem5
+    volumes:
+      - gem5-build-cache:/opt/gem5/build
+      - ../Approx_Instructions:/approx:ro
+      - ../patches/gem5/decoder.isa:/opt/gem5/src/arch/riscv/isa/decoder.isa:ro
+      - ../patches/gem5/ext/softfloat/SConscript:/opt/gem5/ext/softfloat/SConscript:ro
+      - ../patches/gem5/ext/softfloat/internals.h:/opt/gem5/ext/softfloat/internals.h:ro
+      - ../patches/gem5/ext/softfloat/softfloat.h:/opt/gem5/ext/softfloat/softfloat.h:ro
+      - ../patches/gem5/src/cpu/o3/iew.cc:/opt/gem5/src/cpu/o3/iew.cc:ro
+      - ../patches/gem5/src/cpu/o3/iew.hh:/opt/gem5/src/cpu/o3/iew.hh:ro
+      - shared-workspace:/workspace:rw
+    command: >
+      bash -c "
+      cp /approx/*.c /opt/gem5/ext/softfloat/ &&
+      sleep infinity"
+
+  gem5-full:
+    image: ghcr.io/hytalo-bassi/gem5-full:latest
+    working_dir: /opt/gem5
     volumes:
       - shared-workspace:/workspace:rw
-      - shared-workspace-projects:/projects:rw
-    working_dir: /workspace
-    tty: true
-    stdin_open: true
-    environment:
-      - UMASK=000
-      - RISCV=/opt/riscv
-    command: /bin/bash -c "chmod -R 777 /workspace && umask 000 && /bin/bash"
+    command: >
+      bash -c "
+      sleep infinity
+      "
 
 volumes:
+  gem5-build-cache:
   shared-workspace:
     driver: local
     driver_opts:

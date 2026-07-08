@@ -36,6 +36,24 @@ RUN git clone https://github.com/gem5/gem5.git && \
     cd gem5 && \
     git checkout ${GEM5_COMMIT}
 
+RUN echo '\n\
+echo "─────────────────────────────────────────────"\n\
+echo " gem5-base: build environment (development-only)"\n\
+echo "─────────────────────────────────────────────"\n\
+echo " This image contains gem5 source + build deps."\n\
+echo " It is meant to be used as a base for compiling,"\n\
+echo " not for running simulations directly."\n\
+echo ""\n\
+echo " To build gem5 from here, run:"\n\
+echo "   cd /opt/gem5"\n\
+echo "   scons build/RISCV/gem5.fast -j1 --linker=gold"\n\
+echo ""\n\
+echo " Or for the debug-optimized variant:"\n\
+echo "   scons build/RISCV/gem5.opt -j1 --linker=gold"\n\
+echo "─────────────────────────────────────────────"\n\
+' >> /root/.bashrc
+
+
 LABEL org.opencontainers.image.description="gem5 base image for RISC-V" \
       org.opencontainers.image.version="1.0" \
       org.opencontainers.image.revision="${GEM5_COMMIT}"
