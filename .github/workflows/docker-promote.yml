@@ -1,0 +1,54 @@
+name: Promote Release Images
+
+on:
+  release:
+    types: [published]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify sha-tagged images exist
+        run: |
+          set -e
+          for image in riscv-prod gem5-base gem5-full; do
+            echo "Checking ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${image}:sha-${{ github.sha }}"
+            docker buildx imagetools inspect \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${image}:sha-${{ github.sha }} > /dev/null
+          done
+
+      - name: Tag riscv-prod with release version
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/riscv-prod:${{ github.ref_name }} \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/riscv-prod:latest \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/riscv-prod:sha-${{ github.sha }}
+
+      - name: Tag gem5-base with release version
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/gem5-base:${{ github.ref_name }} \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/gem5-base:latest \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/gem5-base:sha-${{ github.sha }}
+
+      - name: Tag gem5-full with release version
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/gem5-full:${{ github.ref_name }} \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/gem5-full:latest \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/gem5-full:sha-${{ github.sha }}
