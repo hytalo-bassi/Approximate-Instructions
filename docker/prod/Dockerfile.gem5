@@ -15,8 +15,9 @@ COPY patches/gem5/ext/softfloat/softfloat.h   /opt/gem5/ext/softfloat/softfloat.
 COPY patches/gem5/src/cpu/o3/iew.cc         /opt/gem5/src/cpu/o3/iew.cc
 COPY patches/gem5/src/cpu/o3/iew.hh         /opt/gem5/src/cpu/o3/iew.hh
 COPY configs/*                               /opt/gem5/configs/
-COPY Approx_Instructions/*                    /opt/gem5/ext/softfloat/
+COPY Approx_Instructions/*                  /opt/gem5/ext/softfloat/
 
+# Erro cp não acha o gem5.fast, algum problema com o scons
 RUN cd gem5 && \
     scons build/RISCV/gem5.fast \
           --linker=gold \
