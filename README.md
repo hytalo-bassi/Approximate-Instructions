@@ -9,6 +9,9 @@ Versão em português disponível [aqui](./docs/README_pt.md)
 
 This repository demonstrates how to integrate approximate instructions into the RISC-V instruction set and GEM5 simulator.
 
+Current release: **v0.0.1**  
+See [CHANGELOG.md](./CHANGELOG.md) for details.
+
 The approximate instruction project includes both integer (addx, subx, mulx, divx) and floating-point (faddx, fsubx, fmulx, fdivx) operations, which are part of my doctoral thesis on "Design Space Exploration with Approximate Computing."
 
 ## Overview
