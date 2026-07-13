@@ -9,7 +9,7 @@ This guide provides step-by-step instructions for installing all required tools 
 - Windows with WSL
 - Mac with Docker
 
-### Hardware
+### Hardware (for building)
 - **Disk space:** Minimum 20-25 GB free (the RISC-V toolchain compilation is large).
 - **RAM**: At least 4 GB (8 GB recommended for parallel compilation with -j$(nproc))
 - **CPU**: Multi-core processor recommended (compilation can take 30 minutes to several hours)
@@ -40,7 +40,7 @@ Basic understanding of:
 
 ### Time Requirement
 
-Docker method: 30 minutes to 2.5 hours (depending on system performance)
+Docker method: 5 minutes to 30 hour (depending on network)
 Manual installation: 4+ hours (depending on system performance)
 
 ## Installation options
@@ -56,34 +56,28 @@ To install the tools in a docker container you first need to install Docker and 
 After installing docker and docker-compose, you can start the installation process by running:
 
 ```bash
-docker compose -f docker/compose.yaml build base
 # if you are going to need gem5
-docker compose -f docker/compose.yaml up riscv-gem5 -d
+docker compose -f docker/compose.yaml up gem5-full -d
 # if you do not want a simulator, you can build only the toolchain
-docker compose -f docker/compose.yaml up base -d
+docker compose -f docker/compose.yaml up toolchain -d
 
 # enter in the container
-docker exec -it <riscv-gem5 or base> bash
+docker exec -it <gem5-full or toolchain> bash
 ```
 
-After the script is done, you are ready to start using it:
+After the work is done, you are ready to start using it:
 
 #### Using the container
 
-The docker creates a folder called `'workspace/'` and some sub-folders like:
+The docker creates a folder called `'workspace/'`.
 
-- `binutils-patches/` the binutils patches
-- `gcc-patches/` the gcc patches
-- `tests/` useful for testing the instructions
-
-You can write your test files to `workspace/tests/`, like `addx.c`. Now, to compile it you need to enter the container  and run these commands:
+You can write your test files to `workspace`, like `addx.c`. Now, to compile it you need to enter the container  and run these commands:
 
 ```bash
 riscv64-unknown-linux-musl-gcc -march=rv64imafdc -static file.c -o file
 
 # Then simulate it:
-cd /opt/gem5/
-build/RISCV/gem5.opt configs/deprecated/example/se.py -c file --num-cpus=3 --cpu-type=O3CPU --caches --l1d_size=32kB --l1d_assoc=2 --l1i_size=32kB --l1i_assoc=2 --l2_size=256kB --l2_assoc=2 --cpu-clock=1GHz
+gem5.fast /srv/gem5/configs/deprecated/example/se.py -c file --num-cpus=3 --cpu-type=O3CPU --caches --l1d_size=32kB --l1d_assoc=2 --l1i_size=32kB --l1i_assoc=2 --l2_size=256kB --l2_assoc=2 --cpu-clock=1GHz
 ```
 
 If you do not want to use Docker Compose, then the installation is done by hand following each step described below:
@@ -292,12 +286,12 @@ int main(){
 Test it (should not raise any error):
 ```bash
 riscv64-unknown-linux-musl-gcc -march=rv64imafdc -static file.c -o file 
-./~/.local/opt/gem5/build/RISCV/gem5.opt configs/deprecated/example/se.py -c file
+gem5.fast configs/deprecated/example/se.py -c file
     --num-cpus=3 --cpu-type=O3CPU --caches --l1d_size=32kB --l1d_assoc=2 
     --l1i_size=32kB --l1i_assoc=2 --l2_size=256kB --l2_assoc=2 --cpu-clock=1GHz
 ```
 
 ## Important Notes
 
-- In case you want to use SPIKE, there is non-maintained guide here
+- In case you want to use SPIKE, there is a non-maintained guide here
 - The installation process may take considerable time, especially for the toolchain compilation

@@ -34,7 +34,7 @@ riscv64-unknown-linux-musl-gcc -O0 -static
     -pthread file.c                                     # Substitua file.c pelo seu arquivo C
 
 # Simule
-build/RISCV/gem5.opt configs/deprecated/example/se.py
+gem5.fast configs/deprecated/example/se.py
     -c a.out
     # Altere apenas o --num-cpus >= 1. Mantenha todos os
     # outros parâmetros iguais, pois são interdependentes
