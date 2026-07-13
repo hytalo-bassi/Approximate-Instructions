@@ -5,6 +5,7 @@ in `simple.py`.
 """
 import argparse
 import os
+import shlex
 
 import m5
 from m5.objects import *
@@ -14,6 +15,13 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument(
     "binary", type=str, help="Path to the binary to execute."
+)
+parser.add_argument(
+    "-c",
+    "--cmd",
+    type=str,
+    default="",
+    help="Options/arguments to pass directly to the binary, e.g. -c \"arg1 arg2\"",
 )
 args = parser.parse_args()
 
@@ -38,7 +46,13 @@ binary = os.path.abspath(args.binary)
 
 system.workload = SEWorkload.init_compatible(binary)
 process = Process()
-process.cmd = [binary]
+
+# Build the command line: binary followed by any extra args passed via -c/--cmd
+cmd = [binary]
+if args.cmd:
+    cmd.extend(shlex.split(args.cmd))
+
+process.cmd = cmd
 system.cpu.workload = process
 system.cpu.createThreads()
 root = Root(full_system=False, system=system)
