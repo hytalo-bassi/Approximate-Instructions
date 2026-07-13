@@ -13,13 +13,13 @@ services:
     working_dir: /opt/gem5
     volumes:
       - gem5-build-cache:/opt/gem5/build
-      - ../Approx_Instructions:/approx:ro
-      - ../patches/gem5/decoder.isa:/opt/gem5/src/arch/riscv/isa/decoder.isa:ro
-      - ../patches/gem5/ext/softfloat/SConscript:/opt/gem5/ext/softfloat/SConscript:ro
-      - ../patches/gem5/ext/softfloat/internals.h:/opt/gem5/ext/softfloat/internals.h:ro
-      - ../patches/gem5/ext/softfloat/softfloat.h:/opt/gem5/ext/softfloat/softfloat.h:ro
-      - ../patches/gem5/src/cpu/o3/iew.cc:/opt/gem5/src/cpu/o3/iew.cc:ro
-      - ../patches/gem5/src/cpu/o3/iew.hh:/opt/gem5/src/cpu/o3/iew.hh:ro
+      - Approx_Instructions:/approx:ro
+      - patches/gem5/decoder.isa:/opt/gem5/src/arch/riscv/isa/decoder.isa:ro
+      - patches/gem5/ext/softfloat/SConscript:/opt/gem5/ext/softfloat/SConscript:ro
+      - patches/gem5/ext/softfloat/internals.h:/opt/gem5/ext/softfloat/internals.h:ro
+      - patches/gem5/ext/softfloat/softfloat.h:/opt/gem5/ext/softfloat/softfloat.h:ro
+      - patches/gem5/src/cpu/o3/iew.cc:/opt/gem5/src/cpu/o3/iew.cc:ro
+      - patches/gem5/src/cpu/o3/iew.hh:/opt/gem5/src/cpu/o3/iew.hh:ro
       - shared-workspace:/workspace:rw
     command: >
       bash -c "
@@ -28,7 +28,7 @@ services:
 
   gem5-full:
     image: ghcr.io/hytalo-bassi/gem5-full:latest
-    working_dir: /opt/gem5
+    working_dir: /workspace
     volumes:
       - shared-workspace:/workspace:rw
     command: >
