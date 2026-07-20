@@ -129,7 +129,6 @@ float32_t softfloat_addMagsF32x( uint_fast32_t uiA, uint_fast32_t uiB )
             sigZ <<= 1;
         }
     }
-    printf("[APPROXIMATE INJECTION] Executing approximate mantissa addition!\n");
 
     return softfloat_roundPackToF32( signZ, expZ, sigZ );
     /*------------------------------------------------------------------------
