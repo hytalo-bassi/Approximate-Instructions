@@ -153,8 +153,9 @@ static inline float fsub(float a, float b) {
     return result;
 }
 
-static inline double fmul(double a, double b) {
-    double result;
+
+static inline float fmul(float a, float b) {
+    float result;
     asm volatile (
         "fmul.s %[z], %[x], %[y]\n\t"
         : [z] "=f" (result)
@@ -163,8 +164,8 @@ static inline double fmul(double a, double b) {
     return result;
 }
 
-static inline double fdiv(double a, double b) {
-    double result;
+static inline float fdiv(float a, float b) {
+    float result;
     asm volatile (
         "fdiv.s %[z], %[x], %[y]\n\t"
         : [z] "=f" (result)

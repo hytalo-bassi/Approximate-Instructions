@@ -10,6 +10,7 @@ consumed using a static cycles/power table (64-bit only).
 import argparse
 import os
 import re
+import shlex
 
 import m5
 from m5.objects import *
@@ -24,6 +25,13 @@ parser.add_argument(
 parser.add_argument(
     "--clock", type=str, default="1GHz",
     help="CPU clock frequency, e.g. '1GHz', '2GHz' (default: 1GHz)."
+)
+parser.add_argument(
+    "-c",
+    "--cmd",
+    type=str,
+    default="",
+    help="Options/arguments to pass directly to the binary, e.g. -c \"arg1 arg2\"",
 )
 args = parser.parse_args()
 
@@ -118,7 +126,7 @@ INSTRUCTION_POWER_TABLE = {
 }
 
 
-def build_system(binary_path):
+def build_system(binary_path, extra_args=None):
     system = System()
     system.clk_domain = SrcClockDomain()
     system.clk_domain.clock = args.clock
@@ -140,7 +148,13 @@ def build_system(binary_path):
 
     system.workload = SEWorkload.init_compatible(binary_path)
     process = Process()
-    process.cmd = [binary_path]
+
+    # Build the command line: binary followed by any extra args passed via -c/--cmd
+    cmd = [binary_path]
+    if extra_args:
+        cmd.extend(extra_args)
+    process.cmd = cmd
+
     system.cpu.workload = process
     system.cpu.createThreads()
 
@@ -198,7 +212,8 @@ def compute_energy_report(counts, clock_period_s):
 
 
 binary = os.path.abspath(args.binary)
-system = build_system(binary)
+extra_args = shlex.split(args.cmd) if args.cmd else []
+system = build_system(binary, extra_args)
 root = Root(full_system=False, system=system)
 m5.instantiate()
 
