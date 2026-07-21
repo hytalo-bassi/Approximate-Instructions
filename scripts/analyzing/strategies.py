@@ -1,6 +1,7 @@
 import random
 import itertools
 import math
+import numpy as np
 from analyzing.scoring import evaluate_candidate
 
 
@@ -38,83 +39,6 @@ def sweep_strategy(fn, iterations, op_names, **kwargs):
     candidates = [dict(zip(op_names, combo)) for combo in itertools.product([False, True], repeat=len(op_names))]
     return [evaluate_candidate(fn, iterations, bits) for bits in candidates]
 
-
-def nsga2_strategy(fn, iterations, op_names, pop_size=20, generations=20,
-                    mutation_rate=None, objectives_fn=None, seed=None, **kwargs):
-    """
-    Returns the final Pareto front: candidates where no other candidate found
-    is strictly better in every objective. Use this when the search space
-    (number of ops) is too large to sweep exhaustively, or when you want a
-    tradeoff curve (error vs. approx-count) instead of one "best" answer.
-    """
-    rng = random.Random(seed)
-    objectives_fn = objectives_fn or default_objectives
-    mutation_rate = mutation_rate if mutation_rate is not None else 1.0 / len(op_names)
-    n_genes = len(op_names)
- 
-    def make_individual():
-        return [rng.randint(0, 1) for _ in range(n_genes)]
- 
-    def evaluate(vector):
-        bits = vector_to_bits(vector, op_names)
-        result = evaluate_candidate(fn, iterations, bits)
-        return result, objectives_fn(result)
- 
-    population = [make_individual() for _ in range(pop_size)]
-    evaluated = [evaluate(ind) for ind in population]
- 
-    for _ in range(generations):
-        objs = [obj for _, obj in evaluated]
-        viols = [_violation(res) for res, _ in evaluated]
-        fronts = _fast_non_dominated_sort(objs, viols)
-        ranks = [0] * len(population)
-        distances = [0.0] * len(population)
-        for rank, front in enumerate(fronts):
-            crowd = _crowding_distance(objs, front)
-            for i in front:
-                ranks[i] = rank
-                distances[i] = crowd[i]
- 
-        offspring = []
-        while len(offspring) < pop_size:
-            p1 = _tournament_select(population, ranks, distances, rng)
-            p2 = _tournament_select(population, ranks, distances, rng)
-            child = _mutate(_crossover(p1, p2, rng), mutation_rate, rng)
-            offspring.append(child)
-        offspring_evaluated = [evaluate(ind) for ind in offspring]
- 
-        combined_pop = population + offspring
-        combined_eval = evaluated + offspring_evaluated
-        combined_obj = [obj for _, obj in combined_eval]
-        combined_viol = [_violation(res) for res, _ in combined_eval]
-        fronts = _fast_non_dominated_sort(combined_obj, combined_viol)
- 
-        new_population, new_evaluated = [], []
-        for front in fronts:
-            if len(new_population) + len(front) <= pop_size:
-                new_population.extend(combined_pop[i] for i in front)
-                new_evaluated.extend(combined_eval[i] for i in front)
-            else:
-                crowd = _crowding_distance(combined_obj, front)
-                remaining = pop_size - len(new_population)
-                chosen = sorted(front, key=lambda i: -crowd[i])[:remaining]
-                new_population.extend(combined_pop[i] for i in chosen)
-                new_evaluated.extend(combined_eval[i] for i in chosen)
-                break
-        population, evaluated = new_population, new_evaluated
- 
-    final_obj = [obj for _, obj in evaluated]
-    final_viol = [_violation(res) for res, _ in evaluated]
-    pareto_indices = _fast_non_dominated_sort(final_obj, final_viol)[0]
-    pareto = [evaluated[i][0] for i in pareto_indices]
-    return dedupe_candidates(pareto)
-
-
-def default_objectives(result):
-    approx_count = sum(result["bits"].values())
-    return (result["global_error"], -approx_count)
- 
- 
 def _dominates(obj_a, obj_b):
     not_worse = all(a <= b for a, b in zip(obj_a, obj_b))
     strictly_better = any(a < b for a, b in zip(obj_a, obj_b))
@@ -204,4 +128,149 @@ def _crossover(parent_a, parent_b, rng):
  
 def _mutate(vector, mutation_rate, rng):
     return [1 - v if rng.random() < mutation_rate else v for v in vector]
+
+
+def _violation_corr(result, min_correlation=0.0):
+    """Same divergence check as _violation, plus: treat near-zero or
+    negative correlation as infeasible outright."""
+    if not math.isfinite(result["global_error"]):
+        return 1.0
+    if _correlation(result) < min_correlation:
+        return 1.0
+    return 0.0
+
+
+def _run_nsga2(fn, iterations, op_names, objectives_fn, pop_size, generations,
+               mutation_rate, seed, violation_fn=_violation):
+    """Shared NSGA-II loop. nsga2_strategy and nsga2_corr_strategy differ
+    only in which objectives_fn they pass in — everything else (selection,
+    crossover, mutation, constrained dominance) is identical."""
+    rng = random.Random(seed)
+    mutation_rate = mutation_rate if mutation_rate is not None else 1.0 / len(op_names)
+    n_genes = len(op_names)
+
+    def make_individual():
+        return [rng.randint(0, 1) for _ in range(n_genes)]
+
+    def evaluate(vector):
+        bits = vector_to_bits(vector, op_names)
+        result = evaluate_candidate(fn, iterations, bits)
+        return result, objectives_fn(result)
+
+    population = [make_individual() for _ in range(pop_size)]
+    evaluated = [evaluate(ind) for ind in population]
+
+    for _ in range(generations):
+        objs = [obj for _, obj in evaluated]
+        viols = [_violation(res) for res, _ in evaluated]
+        fronts = _fast_non_dominated_sort(objs, viols)
+        ranks = [0] * len(population)
+        distances = [0.0] * len(population)
+        for rank, front in enumerate(fronts):
+            crowd = _crowding_distance(objs, front)
+            for i in front:
+                ranks[i] = rank
+                distances[i] = crowd[i]
+
+        offspring = []
+        while len(offspring) < pop_size:
+            p1 = _tournament_select(population, ranks, distances, rng)
+            p2 = _tournament_select(population, ranks, distances, rng)
+            child = _mutate(_crossover(p1, p2, rng), mutation_rate, rng)
+            offspring.append(child)
+        offspring_evaluated = [evaluate(ind) for ind in offspring]
+
+        combined_pop = population + offspring
+        combined_eval = evaluated + offspring_evaluated
+        combined_obj = [obj for _, obj in combined_eval]
+        combined_viol = [_violation(res) for res, _ in combined_eval]
+        fronts = _fast_non_dominated_sort(combined_obj, combined_viol)
+
+        new_population, new_evaluated = [], []
+        for front in fronts:
+            if len(new_population) + len(front) <= pop_size:
+                new_population.extend(combined_pop[i] for i in front)
+                new_evaluated.extend(combined_eval[i] for i in front)
+            else:
+                crowd = _crowding_distance(combined_obj, front)
+                remaining = pop_size - len(new_population)
+                chosen = sorted(front, key=lambda i: -crowd[i])[:remaining]
+                new_population.extend(combined_pop[i] for i in chosen)
+                new_evaluated.extend(combined_eval[i] for i in chosen)
+                break
+        population, evaluated = new_population, new_evaluated
+
+    final_obj = [obj for _, obj in evaluated]
+    final_viol = [_violation(res) for res, _ in evaluated]
+    pareto_indices = _fast_non_dominated_sort(final_obj, final_viol)[0]
+    pareto = [evaluated[i][0] for i in pareto_indices]
+    return dedupe_candidates(pareto)
+
+
+def nsga2_strategy(fn, iterations, op_names, pop_size=20, generations=20,
+                    mutation_rate=None, objectives_fn=None, seed=None, **kwargs):
+    """
+    Returns the final Pareto front over (error, -approx_count).
+    Use this when the search space (number of ops) is too large to sweep
+    exhaustively, or when you want a tradeoff curve instead of one "best" answer.
+    """
+    objectives_fn = objectives_fn or default_objectives
+    return _run_nsga2(fn, iterations, op_names, objectives_fn, pop_size, generations, mutation_rate, seed)
+
+
+def nsga2_corr_strategy(fn, iterations, op_names, pop_size=20, generations=20,
+                         mutation_rate=None, objectives_fn=None, seed=None, **kwargs):
+    """
+    Same as nsga2_strategy, but bonuses candidates whose approximate
+    history correlates most closely with the exact history — i.e. it
+    doesn't just reward small average error, it rewards error that tracks
+    the true signal's shape/trend over time. Useful when you care about
+    the approximation staying "faithful" throughout a run, not just
+    landing close on average or at the final value.
+    """
+    objectives_fn = objectives_fn or correlation_objectives
+    violation_fn = lambda r: _violation_corr(r, min_correlation=min_correlation)
+    return _run_nsga2(fn, iterations, op_names, objectives_fn, pop_size,
+                       generations, mutation_rate, seed, violation_fn=violation_fn)
+
+
+
+def default_objectives(result):
+    approx_count = sum(result["bits"].values())
+    return (result["global_error"], -approx_count)
  
+def _correlation(result):
+    """
+    Pearson correlation between the exact and approximate histories —
+    how well the approximate run TRACKS the exact one over time, not just
+    how close the final numbers land. Returns a value in [-1, 1] where 1
+    is a perfect match in shape.
+
+    Returns -1.0 (worst) for anything correlation can't meaningfully
+    score: too few points, non-finite values (diverged candidates), or a
+    constant series (zero variance -> correlation is undefined).
+    """
+    exact_hist = np.asarray(result.get("exact_history", []), dtype=float)
+    approx_hist = np.asarray(result.get("approx_history", []), dtype=float)
+
+    if exact_hist.size < 2 or exact_hist.size != approx_hist.size:
+        return -1.0
+    if not (np.all(np.isfinite(exact_hist)) and np.all(np.isfinite(approx_hist))):
+        return -1.0
+    if np.std(exact_hist) == 0 or np.std(approx_hist) == 0:
+        return -1.0
+
+    corr = np.corrcoef(exact_hist, approx_hist)[0, 1]
+    return -1.0 if np.isnan(corr) else float(corr)
+
+
+def correlation_objectives(result):
+    """
+    Same as default_objectives, plus a third objective rewarding
+    candidates whose approximate history correlates most closely with the
+    exact one. All objectives are minimized, so correlation (higher =
+    better) is negated, same convention as -approx_count.
+    """
+    approx_count = sum(result["bits"].values())
+    corr = _correlation(result)
+    return (result["global_error"], -approx_count, -corr)

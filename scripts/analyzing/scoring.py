@@ -36,6 +36,8 @@ def evaluate_candidate(fn, iterations, bits):
         "historical_mean_error": historical_mean_error,
         "maximum_error": maximum_error,
         "execution_count": approx.execution_count,
+        "exact_history": exact.history,
+        "approx_history": approx.history,
     }
 
 
