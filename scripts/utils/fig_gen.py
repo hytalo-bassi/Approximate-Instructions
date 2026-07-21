@@ -216,5 +216,4 @@ def auto(
         .grid() \
         .legend() \
         .finish()
-
-    return output
+        
