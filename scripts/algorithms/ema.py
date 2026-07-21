@@ -1,6 +1,6 @@
 from analyzing.custom_approx_ops import *
 from analyzing.scoring import ExecutionResult
-
+import math
 
 def _synthetic_series(n, seed=0):
     return [math.sin(i * 0.1) * 10 + (i % 7) for i in range(n)]
@@ -36,6 +36,11 @@ def exponential_moving_average(iterations, bits, alpha=0.2):
         final_value=ema,
         history=history,
         execution_count=execution_count,
+        metadata={
+            "graph_type": "scatter",
+            "data_points": [(i, v) for i, v in enumerate(_synthetic_series(iterations))],
+            "points": [(i, v) for i, v in enumerate(history)]
+        }
     )
 
 

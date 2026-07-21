@@ -104,6 +104,12 @@ def sgd_linear_regression(epochs, bits):
         final_value=final_value,
         history=history,
         execution_count=execution_count,
+        metadata={
+            "a": m,
+            "b": b,
+            "graph_type": "line",
+            "data_points": DADOS,
+        }
     )
 
 

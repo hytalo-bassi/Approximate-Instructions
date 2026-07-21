@@ -58,6 +58,8 @@ def nn_inference(iterations, bits):
     execution_count["final_div"] += 1
     final_value = s_div(accum, float(len(inputs)), bits.get("final_div", False))
  
+    # No metadata here, since the NN inference should be matched against the exact or other
+    # approximate NNs history
     return ExecutionResult(
         final_value=final_value,
         history=history,
