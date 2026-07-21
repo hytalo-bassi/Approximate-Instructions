@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 from statistics import mean
 import itertools
 import random
@@ -9,6 +10,7 @@ class ExecutionResult:
     final_value: float
     history: list
     execution_count: dict
+    metadata: dict[str, Any] | None = None
 
 
 def evaluate_candidate(fn, iterations, bits):
