@@ -48,7 +48,7 @@ WORKDIR /root/riscv-dev
 RUN git clone --depth=1 --single-branch \
         https://github.com/riscv/riscv-gnu-toolchain.git && \
     cd riscv-gnu-toolchain && \
-    git submodule update --init --recursive --depth=1 binutils gcc gdb
+    git submodule update --init --recursive binutils gcc gdb
 
 
 WORKDIR /root/riscv-dev/riscv-gnu-toolchain
