@@ -58,15 +58,15 @@ float32_t f32_mulx( float32_t a, float32_t b )
 {
     union ui32_f32 uA;
     uint_fast32_t uiA;
-    bool signA;
+    uint32_t signA;
     int_fast16_t expA;
     uint_fast32_t sigA;    //mantissa A
     union ui32_f32 uB;
     uint_fast32_t uiB;
-    bool signB;
+    uint32_t signB;
     int_fast16_t expB;
     uint_fast32_t sigB;    //mantissa B
-    bool signZ;
+    uint32_t signZ;
     uint_fast32_t magBits;
     struct exp16_sig32 normExpSig;
     int_fast16_t expZ;
