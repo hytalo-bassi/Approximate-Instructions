@@ -16,6 +16,7 @@ import argparse
 import csv
 import os
 import re
+import shlex
 
 import m5
 from m5.objects import *
@@ -40,6 +41,13 @@ parser.add_argument(
 parser.add_argument(
     "--csv", type=str, default="energy_report.csv",
     help="Path to the output CSV file (default: energy_report.csv)."
+)
+parser.add_argument(
+    "-c",
+    "--cmd",
+    type=str,
+    default="",
+    help="Options/arguments to pass directly to the binary, e.g. -c \"arg1 arg2\"",
 )
 args = parser.parse_args()
 
@@ -125,6 +133,10 @@ INSTRUCTION_POWER_TABLE = {
     "subx_m":      (1, 5.693986354),
     "mulx_m":      (1, 6.148688032),
     "divx_m":      (1, 6.148688032),
+    "fadd_s":      (2, 3.360603625),
+    "fsub_s":      (2, 3.438743652),
+    "fmul_s":      (2, 3.713349594),
+    "fdiv_s":      (2, 3.713349594),
     # float type instructions (the ones ending in _s) are always 32-bit,
     # even in 64-bit CPUs, so they keep a single fixed power figure.
     "faddx_s":     (2, 3.185852236),
@@ -134,7 +146,7 @@ INSTRUCTION_POWER_TABLE = {
 }
 
 
-def build_system(binary_path):
+def build_system(binary_path, extra_args=None):
     system = System()
     system.clk_domain = SrcClockDomain()
     system.clk_domain.clock = args.clock
@@ -157,6 +169,12 @@ def build_system(binary_path):
     system.workload = SEWorkload.init_compatible(binary_path)
     process = Process()
     process.cmd = [binary_path]
+    
+    cmd = [binary_path]
+    if extra_args:
+        cmd.extend(extra_args)
+    process.cmd = cmd
+
     system.cpu.workload = process
     system.cpu.createThreads()
 
@@ -281,7 +299,8 @@ def write_csv(report, csv_path):
 selected_names = [name.strip() for name in args.inst.split(",") if name.strip()]
 
 binary = os.path.abspath(args.binary)
-system = build_system(binary)
+extra_args = shlex.split(args.cmd) if args.cmd else []
+system = build_system(binary, extra_args)
 root = Root(full_system=False, system=system)
 m5.instantiate()
 

@@ -48,7 +48,7 @@ XLEN = 64
 # Each of the power constant stats was obtained through experimental measurements
 # prior to my entry year in the lab. Those might change in the future
 INSTRUCTION_POWER_TABLE = {
-    # name:          (cycles, power_64bit_W)
+    # name:        (cycles, power_64bit_W)
     "addi":        (1, 5.809836855),
     "sw":          (1, 3.370162992),
     "li":          (1, 3.563078126),
@@ -117,6 +117,10 @@ INSTRUCTION_POWER_TABLE = {
     "subx_m":      (1, 5.693986354),
     "mulx_m":      (1, 6.148688032),
     "divx_m":      (1, 6.148688032),
+    "fadd_s":      (2, 3.360603625),
+    "fsub_s":      (2, 3.438743652),
+    "fmul_s":      (2, 3.713349594),
+    "fdiv_s":      (2, 3.713349594),
     # float type instructions (the ones ending in _s) are always 32-bit,
     # even in 64-bit CPUs, so they keep a single fixed power figure.
     "faddx_s":     (2, 3.185852236),
