@@ -6,7 +6,14 @@ services:
       - shared-workspace:/workspace:rw
     command: >
       bash -c "
-      sleep infinity"
+      apt-get update && apt-get install -y sudo || true;
+      groupadd -g ${HOST_GID} dev 2>/dev/null || true;
+      useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash dev 2>/dev/null || true;
+      echo 'dev ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/dev;
+      chmod 0440 /etc/sudoers.d/dev;
+      chown -R dev:dev /workspace;
+      exec su dev -c 'sleep infinity'
+      "
 
   gem5-base:
     image: ghcr.io/hytalo-bassi/gem5-base:latest
@@ -23,8 +30,15 @@ services:
       - shared-workspace:/workspace:rw
     command: >
       bash -c "
-      cp /approx/*.c /opt/gem5/ext/softfloat/ &&
-      sleep infinity"
+      apt-get update && apt-get install -y sudo || true;
+      groupadd -g ${HOST_GID} dev 2>/dev/null || true;
+      useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash dev 2>/dev/null || true;
+      echo 'dev ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/dev;
+      chmod 0440 /etc/sudoers.d/dev;
+      cp /approx/*.c /opt/gem5/ext/softfloat/;
+      chown -R dev:dev /opt/gem5/build /workspace;
+      exec su dev -c 'sleep infinity'
+      "
 
   gem5-full:
     image: ghcr.io/hytalo-bassi/gem5-full:latest
@@ -34,7 +48,12 @@ services:
       - ../scripts:/workspace/scripts:rw
     command: >
       bash -c "
-      sleep infinity
+      apt-get update && apt-get install -y sudo || true;
+      groupadd -g ${HOST_GID} dev 2>/dev/null || true;
+      useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash dev 2>/dev/null || true;
+      echo 'dev ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/dev;
+      chmod 0440 /etc/sudoers.d/dev;
+      exec su dev -c 'sleep infinity'
       "
 
 volumes:
