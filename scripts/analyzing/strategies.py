@@ -162,7 +162,7 @@ def _run_nsga2(fn, iterations, op_names, objectives_fn, pop_size, generations,
 
     for _ in range(generations):
         objs = [obj for _, obj in evaluated]
-        viols = [_violation(res) for res, _ in evaluated]
+        viols = [violation_fn(res) for res, _ in evaluated]
         fronts = _fast_non_dominated_sort(objs, viols)
         ranks = [0] * len(population)
         distances = [0.0] * len(population)
@@ -183,7 +183,7 @@ def _run_nsga2(fn, iterations, op_names, objectives_fn, pop_size, generations,
         combined_pop = population + offspring
         combined_eval = evaluated + offspring_evaluated
         combined_obj = [obj for _, obj in combined_eval]
-        combined_viol = [_violation(res) for res, _ in combined_eval]
+        combined_viol = [violation_fn(res) for res, _ in combined_eval]
         fronts = _fast_non_dominated_sort(combined_obj, combined_viol)
 
         new_population, new_evaluated = [], []
@@ -201,7 +201,7 @@ def _run_nsga2(fn, iterations, op_names, objectives_fn, pop_size, generations,
         population, evaluated = new_population, new_evaluated
 
     final_obj = [obj for _, obj in evaluated]
-    final_viol = [_violation(res) for res, _ in evaluated]
+    final_viol = [violation_fn(res) for res, _ in evaluated]
     pareto_indices = _fast_non_dominated_sort(final_obj, final_viol)[0]
     pareto = [evaluated[i][0] for i in pareto_indices]
     return dedupe_candidates(pareto)
@@ -219,7 +219,8 @@ def nsga2_strategy(fn, iterations, op_names, pop_size=20, generations=20,
 
 
 def nsga2_corr_strategy(fn, iterations, op_names, pop_size=20, generations=20,
-                         mutation_rate=None, objectives_fn=None, seed=None, **kwargs):
+                         mutation_rate=None, objectives_fn=None, seed=None,
+                         min_correlation=0.0, **kwargs):
     """
     Same as nsga2_strategy, but bonuses candidates whose approximate
     history correlates most closely with the exact history — i.e. it
@@ -227,6 +228,10 @@ def nsga2_corr_strategy(fn, iterations, op_names, pop_size=20, generations=20,
     the true signal's shape/trend over time. Useful when you care about
     the approximation staying "faithful" throughout a run, not just
     landing close on average or at the final value.
+
+    min_correlation: candidates whose exact/approx history correlation
+    falls below this threshold are treated as infeasible (same as a
+    diverged candidate) and excluded from competing on error/count alone.
     """
     objectives_fn = objectives_fn or correlation_objectives
     violation_fn = lambda r: _violation_corr(r, min_correlation=min_correlation)

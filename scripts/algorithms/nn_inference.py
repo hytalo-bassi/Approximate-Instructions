@@ -1,4 +1,5 @@
 from analyzing.custom_approx_ops import *
+from transpile_annotations import helper
 from analyzing.scoring import ExecutionResult
 import math
 
@@ -8,7 +9,7 @@ _W = {
     "w_out_h1": 1.2, "w_out_h2": -0.7, "b_out": 0.05,
 }
 
-
+@helper
 def _synthetic_inputs(n):
     return [(math.sin(i * 0.31), math.cos(i * 0.17)) for i in range(n)]
  

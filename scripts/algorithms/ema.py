@@ -1,7 +1,9 @@
 from analyzing.custom_approx_ops import *
+from transpile_annotations import helper
 from analyzing.scoring import ExecutionResult
 import math
 
+@helper
 def _synthetic_series(n, seed=0):
     return [math.sin(i * 0.1) * 10 + (i % 7) for i in range(n)]
 

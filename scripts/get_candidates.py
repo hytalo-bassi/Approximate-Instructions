@@ -15,6 +15,8 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import sys
 from importlib import import_module
 
@@ -85,6 +87,15 @@ def print_candidate_code(results, info, iterations, prefix="nsga2"):
     # for use as a variable-name prefix in the printed code.
     var_prefix = prefix.replace("-", "_")
 
+    # Path to the algorithm's source file, relative to the current working
+    # directory. analyze.py is always run from the scripts/ root, so this
+    # comes out as e.g. "algorithms/nn_inference.py" -- the path the
+    # transpiler CLI expects. Derived from the actual imported module
+    # rather than assumed from a naming convention, so it stays correct
+    # even if an algorithm's module path doesn't mirror its file layout.
+    module = import_module(info["module"])
+    algo_path = os.path.relpath(module.__file__, os.getcwd())
+
     print("\n=== Python Code ===\n")
 
     print(
@@ -105,6 +116,32 @@ def print_candidate_code(results, info, iterations, prefix="nsga2"):
         print(
             f"res_{var_prefix}_{i} = "
             f"{info['function']}({iterations}, {enabled})"
+        )
+
+    print("\n=== Transpiler Commands ===\n")
+
+    # <name> = the algorithm's module basename, e.g. "nn_inference" from
+    # "algorithms.nn_inference" -- used as both the output directory and
+    # the per-candidate filename prefix.
+    algo_name = info["module"].rsplit(".", 1)[-1]
+
+    print(
+        f"# exact (no approximate ops)\n"
+        f"uv run transpiler.py {algo_path} --bits '{{}}' -o {algo_name}/exact.c"
+    )
+
+    for i, result in enumerate(results, start=1):
+        enabled = {
+            name: True
+            for name, enabled in result["bits"].items()
+            if enabled
+        }
+        bits_json = json.dumps(enabled)
+        out_path = f"{algo_name}/{algo_name}_{var_prefix}_{i}.c"
+
+        print(
+            f"# res_{var_prefix}_{i}\n"
+            f"uv run transpiler.py {algo_path} --bits '{bits_json}' -o {out_path}"
         )
 
 

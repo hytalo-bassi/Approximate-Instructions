@@ -25,7 +25,7 @@ def calculate_pi(iterations, bits):
         execution_count["add_denom"] += 1
         denominator = s_add(denominator, 2.0, bits.get("add_denom", False))
 
-        sign *= -1
+        sign = sign * -1
         history.append(pi_estimate)
 
     return ExecutionResult(
@@ -33,5 +33,6 @@ def calculate_pi(iterations, bits):
         history=history,
         execution_count=execution_count,
     )
+
 
 calculate_pi.ops = ("div", "add_pi", "add_denom")

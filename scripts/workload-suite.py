@@ -102,7 +102,67 @@ def parse_args():
         help="Comma-separated list of metadata keys to watch and record from "
              "each benchmark's own JSON report (e.g. 'ema,alpha').",
     )
+    parser.add_argument(
+        "-W",
+        "--watch-stats",
+        default="",
+        help=(
+            "Comma-separated list of gem5 stats to extract from "
+            "m5out/stats.txt (e.g. simTicks,system.cpu.numCycles)"
+        ),
+    )
     return parser.parse_args()
+
+
+def read_watched_stats(stats_path: Path, watch_stats: list):
+    """Read selected statistics from gem5's stats.txt."""
+
+    values = {key: "" for key in watch_stats}
+
+    if not watch_stats:
+        return values
+
+    if not stats_path.is_file():
+        print(
+            f"    WARNING: stats file not found: {stats_path}",
+            file=sys.stderr,
+        )
+        return values
+
+    stats = {}
+
+    try:
+        with open(stats_path, "r") as f:
+            for line in f:
+                line = line.strip()
+
+                if not line or line.startswith("#"):
+                    continue
+
+                parts = line.split()
+
+                if len(parts) < 2:
+                    continue
+
+                stats[parts[0]] = parts[1]
+
+    except OSError as e:
+        print(
+            f"    WARNING: could not read {stats_path}: {e}",
+            file=sys.stderr,
+        )
+        return values
+
+    for key in watch_stats:
+        if key in stats:
+            values[key] = stats[key]
+        else:
+            print(
+                f"    WARNING: stat '{key}' not found in stats.txt",
+                file=sys.stderr,
+            )
+
+    return values
 
 
 def run_step(cmd_list, description, capture=False):
@@ -220,21 +280,38 @@ def read_watched_metadata(report_json_path: Path, watch_keys: list):
     return values
 
 
-def write_summary_csv(summary_csv_path: Path, rows: list, watch_keys: list):
+def write_summary_csv(
+    summary_csv_path: Path,
+    rows: list,
+    watch_keys: list,
+    watch_stats: list,
+):
     """Write all collected per-file results into a single consolidated CSV.
 
     Each row identifies which source file it came from ("source_file"), the
     energy summary columns, and (if watch_keys is non-empty) one extra column
     per watched metadata key.
     """
-    fieldnames = ["source_file", "total_time_s", "total_energy_j", "avg_power_w"] + watch_keys
+    fieldnames = (
+       [
+           "source_file",
+           "total_time_s",
+           "total_energy_j",
+           "avg_power_w",
+       ]
+       + watch_keys
+       + watch_stats
+    )
+
     with open(summary_csv_path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(fieldnames)
         for row in rows:
             base = [row["source_file"], row["time_s"], row["energy_j"], row["avg_power_w"]]
             watched = [row.get(key, "") for key in watch_keys]
-            writer.writerow(base + watched)
+            stats = [row.get(key, "") for key in watch_stats]
+
+            writer.writerow(base + watched + stats)
 
 
 def run_gem5(gem5_path: str, binary_path: Path, clock: str):
@@ -287,8 +364,16 @@ def main():
         sys.exit(0)
 
     watch_keys = [k.strip() for k in args.watch.split(",") if k.strip()]
+    watch_stats = [
+        k.strip()
+        for k in args.watch_stats.split(",")
+        if k.strip()
+    ]
+
     if watch_keys:
         print(f"Watching metadata keys: {', '.join(watch_keys)}\n")
+    if watch_stats:
+        print(f"Watching gem5 stats: {', '.join(watch_stats)}")
 
     print(f"Found {len(source_files)} source file(s) in '{folder}'.\n")
 
@@ -302,6 +387,10 @@ def main():
             report_json_path, summary = run_gem5(
                 args.gem5_path, binary_path, args.clock
             )
+            stats_values = read_watched_stats(
+               Path("m5out") / "stats.txt",
+               watch_stats,
+            )
 
             watched_values = read_watched_metadata(report_json_path, watch_keys)
 
@@ -310,7 +399,9 @@ def main():
                     "source_file": src_path.name,
                     **summary,
                     **watched_values,
+                    **stats_values,
                 })
+
                 print(f"    OK -> {report_json_path.name} (energy stats recorded)\n")
             else:
                 print(f"    OK -> {report_json_path.name} (no energy stats recorded)\n")
@@ -320,7 +411,7 @@ def main():
 
     summary_csv_path = folder / SUMMARY_CSV_NAME
     if summary_rows:
-        write_summary_csv(summary_csv_path, summary_rows, watch_keys)
+        write_summary_csv(summary_csv_path, summary_rows, watch_keys, watch_stats)
         print(f"Wrote consolidated energy summary -> {summary_csv_path}")
     else:
         print("No energy summaries were collected; skipping consolidated CSV.")
